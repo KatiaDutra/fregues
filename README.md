@@ -39,12 +39,14 @@ No Freguês, **a IA entende e o sistema decide**.
 
 ## Adaptável a qualquer pequeno negócio
 
-O cardápio, os preços, os horários e as regras da loja ficam em um único arquivo de configuração (`config/ze-burger.json`). Trocando esse arquivo, o Freguês passa a atender outro negócio, sem alterar o código.
+O cardápio, os preços, os horários, as dúvidas frequentes e as regras da loja ficam em um único arquivo de configuração (`config/ze-burger.json`). Trocando esse arquivo, o Freguês passa a atender outro negócio, sem alterar o código.
+
+O Freguês funciona como **white-label**: no chat, o cliente final vê as cores, o nome e o atendente da loja. A marca do Freguês aparece só no rodapé e, futuramente, nas telas de gestão usadas pelo dono do negócio.
 
 ## Roteiro de desenvolvimento
 
 ### Versão 1: atendimento e pedido
-- [ ] Acolhimento com horário de funcionamento e perguntas frequentes
+- [x] Acolhimento com horário de funcionamento e perguntas frequentes
 - [ ] Montagem do pedido com adicionais, combos e preço em tempo real
 - [ ] Entrega ou retirada, com taxa por bairro e pedido mínimo
 - [ ] Envio do pedido resumido para o WhatsApp da loja
@@ -91,6 +93,9 @@ fregues/
 ├── js/
 │   ├── main.js           Ponto de entrada
 │   ├── config.js         Carrega a configuração da loja
+│   ├── tema.js           Aplica as cores e fontes da loja
+│   ├── horario.js        Calcula se a loja está aberta
+│   ├── ui.js             Mensagens, opções e jornada na tela
 │   ├── bot.js            Conversa com o cliente
 │   ├── pedido.js         Regras e cálculo do pedido
 │   ├── whatsapp.js       Resumo e link para o WhatsApp
@@ -98,7 +103,8 @@ fregues/
 ├── config/
 │   └── ze-burger.json    Cardápio e regras da loja de demonstração
 ├── worker/               Função intermediária da IA
-├── assets/img/           Logo, ícones e favicon
+├── assets/img/           Logo, ícones e favicon do Freguês
+├── assets/lojas/         Imagens de cada loja (avatar, logo)
 └── docs/validacao/       Registro dos testes com usuários
 ```
 

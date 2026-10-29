@@ -3,10 +3,29 @@
     "nome": "Zé Burger",
     "descricao": "Hamburgueria fictícia criada para demonstrar o Freguês",
     "whatsapp": "5500000000000",
-    "instagram": "zeburger.demo"
+    "instagram": "zeburger.demo",
+    "atendente": "Chefe Zé",
+    "avatar": "assets/lojas/ze-burger/avatar-provisorio.png"
+  },
+  "tema": {
+    "fundo": "#FFF8EC",
+    "principal": "#3B5C63",
+    "textoSobrePrincipal": "#FFFFFF",
+    "destaque": "#FAC322",
+    "texto": "#231F1C",
+    "alerta": "#D7322A",
+    "fonteTitulos": "Baloo 2",
+    "fonteTexto": "Atkinson Hyperlegible"
   },
   "horario": {
-    "diasDaSemana": [2, 3, 4, 5, 6, 0],
+    "diasDaSemana": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      0
+    ],
     "abre": "18:00",
     "fecha": "23:30"
   },
@@ -14,12 +33,25 @@
     "pedidoMinimo": 30,
     "retiradaNoBalcao": true,
     "bairros": [
-      { "nome": "Centro", "taxa": 5 },
-      { "nome": "Vila Nova", "taxa": 7 },
-      { "nome": "Jardim das Flores", "taxa": 9 }
+      {
+        "nome": "Centro",
+        "taxa": 5
+      },
+      {
+        "nome": "Vila Nova",
+        "taxa": 7
+      },
+      {
+        "nome": "Jardim das Flores",
+        "taxa": 9
+      }
     ]
   },
-  "pagamento": ["Pix", "Cartão na entrega", "Dinheiro"],
+  "pagamento": [
+    "Pix",
+    "Cartão na entrega",
+    "Dinheiro"
+  ],
   "cardapio": {
     "burgers": [
       {
@@ -51,24 +83,68 @@
         "pontoDaCarne": false
       }
     ],
-    "pontosDaCarne": ["Mal passado", "Ao ponto", "Bem passado"],
+    "pontosDaCarne": [
+      "Mal passado",
+      "Ao ponto",
+      "Bem passado"
+    ],
     "adicionais": [
-      { "id": "bacon", "nome": "Bacon", "preco": 4 },
-      { "id": "cheddar", "nome": "Cheddar extra", "preco": 3 },
-      { "id": "ovo", "nome": "Ovo", "preco": 3 },
-      { "id": "cebola-caramelizada", "nome": "Cebola caramelizada", "preco": 3 }
+      {
+        "id": "bacon",
+        "nome": "Bacon",
+        "preco": 4
+      },
+      {
+        "id": "cheddar",
+        "nome": "Cheddar extra",
+        "preco": 3
+      },
+      {
+        "id": "ovo",
+        "nome": "Ovo",
+        "preco": 3
+      },
+      {
+        "id": "cebola-caramelizada",
+        "nome": "Cebola caramelizada",
+        "preco": 3
+      }
     ],
     "acompanhamentos": [
-      { "id": "batata", "nome": "Batata frita", "preco": 14 },
-      { "id": "aneis", "nome": "Anéis de cebola", "preco": 16 }
+      {
+        "id": "batata",
+        "nome": "Batata frita",
+        "preco": 14
+      },
+      {
+        "id": "aneis",
+        "nome": "Anéis de cebola",
+        "preco": 16
+      }
     ],
     "bebidas": [
-      { "id": "refri-lata", "nome": "Refrigerante lata", "preco": 6 },
-      { "id": "suco", "nome": "Suco natural", "preco": 9 },
-      { "id": "agua", "nome": "Água", "preco": 4 }
+      {
+        "id": "refri-lata",
+        "nome": "Refrigerante lata",
+        "preco": 6
+      },
+      {
+        "id": "suco",
+        "nome": "Suco natural",
+        "preco": 9
+      },
+      {
+        "id": "agua",
+        "nome": "Água",
+        "preco": 4
+      }
     ],
     "sobremesas": [
-      { "id": "brownie", "nome": "Brownie", "preco": 12 }
+      {
+        "id": "brownie",
+        "nome": "Brownie",
+        "preco": 12
+      }
     ],
     "combo": {
       "nome": "Combo do Zé",
@@ -80,5 +156,45 @@
     "selosParaPremio": 10,
     "premio": "Um Clássico do Zé grátis",
     "validadeDosSelosEmDias": 180
-  }
+  },
+  "duvidas": [
+    {
+      "palavras": [
+        "vegetariano",
+        "vegetariana",
+        "vegano",
+        "vegana",
+        "veggie"
+      ],
+      "resposta": "Temos o Veggie da Horta: burger de grão-de-bico, queijo, rúcula e tomate seco, no pão integral."
+    },
+    {
+      "palavras": [
+        "endereco",
+        "onde fica",
+        "retirar",
+        "retirada",
+        "balcao"
+      ],
+      "resposta": "Você pode retirar seu pedido no balcão. O endereço aparece na confirmação do pedido."
+    },
+    {
+      "palavras": [
+        "combo",
+        "promocao",
+        "desconto"
+      ],
+      "resposta": "O Combo do Zé junta qualquer burger, batata frita e refrigerante lata, com R$ 6 de desconto."
+    },
+    {
+      "palavras": [
+        "fidelidade",
+        "selo",
+        "selos",
+        "cartao fidelidade",
+        "premio"
+      ],
+      "resposta": "A cada pedido você ganha um selo. Com 10 selos, o próximo Clássico do Zé é por nossa conta."
+    }
+  ]
 }

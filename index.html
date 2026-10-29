@@ -2,25 +2,54 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Freguês</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Atendimento | Freguês</title>
   <meta name="description" content="Atendimento, pedidos e fidelidade para pequenos negócios de alimentação.">
-  <meta name="theme-color" content="#592012">
+  <meta name="theme-color" content="#3B5C63">
   <link rel="icon" href="assets/img/favicon.ico" sizes="48x48">
-  <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="assets/img/favicon-16.png">
   <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Baloo+2:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/estilos.css">
 </head>
 <body>
-  <main>
-    <h1>Freguês</h1>
-    <p>Do primeiro pedido ao freguês de sempre.</p>
-  </main>
+  <div class="app">
+    <header class="cabecalho">
+      <img id="avatar-da-loja" class="cabecalho__avatar" src="" alt="">
+      <div>
+        <h1 id="nome-da-loja" class="cabecalho__nome">Carregando…</h1>
+        <p id="status-da-loja" class="cabecalho__status"></p>
+      </div>
+    </header>
 
-  <footer>
-    <p>Zé Burger é uma hamburgueria fictícia criada para demonstrar o Freguês.</p>
-  </footer>
+    <nav aria-label="Etapas do atendimento">
+      <ol class="jornada">
+        <li aria-current="step">Conversa</li>
+        <li>Pedido</li>
+        <li>Cozinha</li>
+        <li>Fidelidade</li>
+        <li>Avaliação</li>
+      </ol>
+    </nav>
+
+    <main id="mensagens" class="mensagens" role="log" aria-live="polite" aria-label="Conversa com a loja"></main>
+
+    <div id="opcoes" class="opcoes" aria-label="Respostas rápidas"></div>
+
+    <form id="formulario-mensagem" class="escrever">
+      <label for="campo-mensagem" class="visualmente-oculto">Escreva sua mensagem</label>
+      <input id="campo-mensagem" type="text" placeholder="Escreva sua mensagem" maxlength="300" autocomplete="off">
+      <button type="submit" aria-label="Enviar mensagem">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 11.5 20.5 4 14 21l-2.6-7.4L3 11.5Z" fill="currentColor"/></svg>
+      </button>
+    </form>
+
+    <footer class="rodape">
+      <p><img src="assets/img/favicon-32.png" alt="" width="16" height="16"> Atendimento por <strong>Freguês</strong></p>
+      <p>Zé Burger é uma hamburgueria fictícia criada para demonstrar o Freguês.</p>
+    </footer>
+  </div>
 
   <script type="module" src="js/main.js"></script>
 </body>
