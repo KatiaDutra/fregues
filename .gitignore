@@ -1,0 +1,11 @@
+# Chaves e variáveis de ambiente: nunca vão para o GitHub
+.env
+.dev.vars
+
+# Sistema e editores
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Dependências
+node_modules/
