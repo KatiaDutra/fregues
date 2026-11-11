@@ -1,13 +1,16 @@
 // bot.js
-// Conversa com o cliente: acolhimento, perguntas frequentes e respostas rápidas.
+// Conversa com o cliente: acolhimento, perguntas frequentes e menu principal.
+// O pedido em si fica em fluxo-pedido.js.
 // Nesta etapa o bot entende texto livre por palavras-chave.
-// Na semana 2, a IA (ia.js) passa a entender frases mais livres.
 
-import { adicionarMensagem, mostrarDigitando, mostrarOpcoes, limparOpcoes, definirEtapa } from "./ui.js";
+import { adicionarMensagem, mostrarOpcoes, limparOpcoes, definirEtapa } from "./ui.js";
+import { botResponde, normalizar, contemPalavra, haPerguntaPendente, responderPendente, cancelarPergunta } from "./conversa.js";
 import { statusDaLoja, descreverDias } from "./horario.js";
 import { formatarPreco } from "./pedido.js";
+import { fazerPedido } from "./fluxo-pedido.js";
 
 let loja = null;
+let fazendoPedido = false;
 
 const OPCOES_PRINCIPAIS = [
   { id: "pedido", rotulo: "Fazer pedido" },
@@ -28,28 +31,6 @@ const PALAVRAS_CHAVE = {
   pagamento: ["pagamento", "pagar", "pix", "cartao", "dinheiro", "troco"],
   saudacao: ["oi", "ola", "bom dia", "boa tarde", "boa noite", "e ai"],
 };
-
-// Remove acentos e deixa minúsculo: "Cardápio" vira "cardapio".
-function normalizar(texto) {
-  return texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, " ");
-}
-
-function contemPalavra(textoNormalizado, palavra) {
-  return ` ${textoNormalizado} `.replace(/\s+/g, " ").includes(` ${palavra} `);
-}
-
-function esperar(milissegundos) {
-  return new Promise((resolver) => setTimeout(resolver, milissegundos));
-}
-
-// O bot "digita" antes de responder, para a conversa parecer natural.
-async function botResponde(conteudo) {
-  const pararDeDigitar = mostrarDigitando();
-  const reduzirMovimento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  await esperar(reduzirMovimento ? 150 : 700);
-  pararDeDigitar();
-  adicionarMensagem("bot", conteudo);
-}
 
 // ---------- Respostas ----------
 
@@ -114,17 +95,8 @@ function respostaPagamento() {
   return `Você pode pagar com ${texto}.`;
 }
 
-function respostaPedido() {
-  const status = statusDaLoja(loja.horario);
-  if (!status.aberta) {
-    return `No momento estamos fechados. ${status.resumo.replace("Fechado, a", "A")}. Enquanto isso, você pode dar uma olhada no cardápio!`;
-  }
-  return "A montagem do pedido por aqui chega em breve. Enquanto isso, dá uma olhada no cardápio!";
-}
-
 const RESPOSTAS = {
   saudacao: () => "Oi! Em que posso ajudar?",
-  pedido: respostaPedido,
   cardapio: respostaCardapio,
   horario: respostaHorario,
   entrega: respostaEntrega,
@@ -133,10 +105,25 @@ const RESPOSTAS = {
 
 // ---------- Fluxo da conversa ----------
 
+function mostrarMenu() {
+  mostrarOpcoes(OPCOES_PRINCIPAIS, escolherOpcao);
+}
+
+async function iniciarPedido() {
+  fazendoPedido = true;
+  await fazerPedido(loja);
+  fazendoPedido = false;
+  mostrarMenu();
+}
+
 async function responder(idDaResposta) {
   limparOpcoes();
+  if (idDaResposta === "pedido") {
+    await iniciarPedido();
+    return;
+  }
   await botResponde(RESPOSTAS[idDaResposta]());
-  mostrarOpcoes(OPCOES_PRINCIPAIS, escolherOpcao);
+  mostrarMenu();
 }
 
 function escolherOpcao(opcao) {
@@ -146,14 +133,27 @@ function escolherOpcao(opcao) {
 
 export async function responderTexto(texto) {
   adicionarMensagem("cliente", texto);
-  limparOpcoes();
   const textoNormalizado = normalizar(texto);
+
+  // Durante o pedido, o texto responde à pergunta atual
+  if (fazendoPedido) {
+    if (contemPalavra(textoNormalizado, "cancelar")) {
+      cancelarPergunta();
+      return;
+    }
+    if (haPerguntaPendente() && !(await responderPendente(texto))) {
+      await botResponde("Não encontrei essa opção. Escolha uma das opções abaixo, ou digite cancelar para desistir do pedido.");
+    }
+    return;
+  }
+
+  limparOpcoes();
 
   // 1. Dúvidas cadastradas pela loja na configuração
   const duvida = loja.duvidas.find((d) => d.palavras.some((p) => contemPalavra(textoNormalizado, normalizar(p))));
   if (duvida) {
     await botResponde(duvida.resposta);
-    mostrarOpcoes(OPCOES_PRINCIPAIS, escolherOpcao);
+    mostrarMenu();
     return;
   }
 
@@ -168,7 +168,7 @@ export async function responderTexto(texto) {
 
   // 3. Não entendeu: oferece as opções
   await botResponde("Ainda não entendi essa. Pode escolher uma das opções abaixo?");
-  mostrarOpcoes(OPCOES_PRINCIPAIS, escolherOpcao);
+  mostrarMenu();
 }
 
 export async function iniciarConversa(configuracaoDaLoja) {
@@ -184,5 +184,5 @@ export async function iniciarConversa(configuracaoDaLoja) {
     await botResponde(`Agora estamos fechados. ${status.resumo.replace("Fechado, a", "A")}. Mas pode ver o cardápio e tirar dúvidas por aqui!`);
   }
 
-  mostrarOpcoes(OPCOES_PRINCIPAIS, escolherOpcao);
+  mostrarMenu();
 }

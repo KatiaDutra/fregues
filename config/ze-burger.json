@@ -5,7 +5,8 @@
     "whatsapp": "5500000000000",
     "instagram": "zeburger.demo",
     "atendente": "Chefe Zé",
-    "avatar": "assets/lojas/ze-burger/avatar-provisorio.png"
+    "avatar": "assets/lojas/ze-burger/avatar-provisorio.png",
+    "demonstracao": true
   },
   "tema": {
     "fundo": "#FFF8EC",
@@ -148,7 +149,11 @@
     ],
     "combo": {
       "nome": "Combo do Zé",
-      "descricao": "Qualquer burger + batata frita + refrigerante lata",
+      "descricao": "Batata frita e refrigerante lata",
+      "itens": [
+        "batata",
+        "refri-lata"
+      ],
       "desconto": 6
     }
   },

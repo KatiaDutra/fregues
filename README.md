@@ -47,9 +47,9 @@ O Freguês funciona como **white-label**: no chat, o cliente final vê as cores,
 
 ### Versão 1: atendimento e pedido
 - [x] Acolhimento com horário de funcionamento e perguntas frequentes
-- [ ] Montagem do pedido com adicionais, combos e preço em tempo real
-- [ ] Entrega ou retirada, com taxa por bairro e pedido mínimo
-- [ ] Envio do pedido resumido para o WhatsApp da loja
+- [x] Montagem do pedido com adicionais, combos e preço em tempo real
+- [x] Entrega ou retirada, com taxa por bairro e pedido mínimo
+- [x] Envio do pedido resumido para o WhatsApp da loja
 - [ ] Pedido em texto livre e dúvidas respondidas com IA
 - [ ] Painel da cozinha com status do pedido em tempo real
 
@@ -96,7 +96,9 @@ fregues/
 │   ├── tema.js           Aplica as cores e fontes da loja
 │   ├── horario.js        Calcula se a loja está aberta
 │   ├── ui.js             Mensagens, opções e jornada na tela
-│   ├── bot.js            Conversa com o cliente
+│   ├── conversa.js       Perguntas, respostas e o bot "digitando"
+│   ├── bot.js            Acolhimento, dúvidas e menu principal
+│   ├── fluxo-pedido.js   Roteiro da montagem do pedido
 │   ├── pedido.js         Regras e cálculo do pedido
 │   ├── whatsapp.js       Resumo e link para o WhatsApp
 │   └── ia.js             Camada opcional de IA
@@ -132,6 +134,8 @@ O mascote do Freguês é um atendente robô: o fone representa o atendimento, o 
 As imagens da marca foram geradas com IA (Google Gemini) a partir de direção criativa da autora e adaptadas para uso na web.
 
 ## Demonstração
+
+O Zé Burger está em **modo demonstração** (`"demonstracao": true` na configuração): é possível fazer pedidos mesmo fora do horário de funcionamento, e o botão do WhatsApp abre o aplicativo com o pedido pronto para você escolher o contato. Em uma loja real, basta desligar essa opção e informar o número da loja.
 
 **Zé Burger é uma hamburgueria fictícia criada para demonstrar o Freguês.** Qualquer semelhança com estabelecimentos reais é coincidência.
 

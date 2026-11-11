@@ -294,6 +294,84 @@ body {
   background: color-mix(in srgb, var(--cor-destaque) 85%, var(--cor-texto));
 }
 
+.opcao__detalhe {
+  margin-left: 6px;
+  font-weight: 400;
+  font-size: 0.8rem;
+}
+
+/* Opções de menor importância (voltar, finalizar, cancelar) */
+.opcao--secundaria {
+  background: transparent;
+  border-color: var(--cor-linha);
+}
+
+.opcao--secundaria:hover {
+  background: var(--cor-linha);
+}
+
+/* Adicionais: desmarcados ficam claros, marcados ficam na cor de destaque */
+.opcao--marcavel {
+  background: #FFFFFF;
+  border-color: var(--cor-linha);
+}
+
+.opcao--marcavel:hover {
+  background: color-mix(in srgb, var(--cor-destaque) 25%, #FFFFFF);
+}
+
+.opcao--marcavel[aria-pressed="true"] {
+  background: var(--cor-destaque);
+  border-color: color-mix(in srgb, var(--cor-destaque) 70%, var(--cor-texto));
+}
+
+.opcao--marcavel[aria-pressed="true"]::before {
+  content: "✓ ";
+}
+
+.opcao--confirmar {
+  background: var(--cor-principal);
+  border-color: var(--cor-principal);
+  color: var(--cor-texto-sobre-principal);
+}
+
+.opcao--confirmar:hover {
+  background: color-mix(in srgb, var(--cor-principal) 85%, var(--cor-texto));
+}
+
+/* ---------- Resumo do pedido ---------- */
+
+.resumo {
+  margin: 0 14px 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--cor-principal) 10%, var(--cor-fundo));
+  border: 1px solid color-mix(in srgb, var(--cor-principal) 25%, var(--cor-fundo));
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.lista-totais {
+  padding-top: 8px;
+  border-top: 1px dashed var(--cor-linha);
+  gap: 2px;
+}
+
+.botao-whatsapp {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--cor-principal);
+  color: var(--cor-texto-sobre-principal);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.botao-whatsapp:hover {
+  background: color-mix(in srgb, var(--cor-principal) 85%, var(--cor-texto));
+}
+
 /* ---------- Campo de mensagem ---------- */
 
 .escrever {
@@ -326,6 +404,11 @@ body {
   background: var(--cor-principal);
   color: var(--cor-texto-sobre-principal);
   cursor: pointer;
+}
+
+.escrever input:focus-visible {
+  outline: 2px solid var(--cor-principal);
+  outline-offset: 1px;
 }
 
 /* ---------- Rodapé ---------- */
