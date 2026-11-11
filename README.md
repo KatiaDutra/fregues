@@ -51,7 +51,7 @@ O Freguês funciona como **white-label**: no chat, o cliente final vê as cores,
 - [x] Entrega ou retirada, com taxa por bairro e pedido mínimo
 - [x] Envio do pedido resumido para o WhatsApp da loja
 - [ ] Pedido em texto livre e dúvidas respondidas com IA
-- [ ] Painel da cozinha com status do pedido em tempo real
+- [x] Painel da cozinha com status do pedido em tempo real
 
 ### Versão 2: fidelidade
 - [ ] Cartão fidelidade identificado pelo telefone
@@ -62,6 +62,19 @@ O Freguês funciona como **white-label**: no chat, o cliente final vê as cores,
 - [ ] Avaliação do pedido de 1 a 5
 - [ ] Mensagem de agradecimento pronta para o dono enviar
 - [ ] Resumo das avaliações com IA
+
+## Segurança dos dados
+
+Os pedidos ficam no Firestore, protegidos pelas regras em `firestore.rules`:
+
+- qualquer pessoa pode **criar** um pedido, desde que ele tenha o formato esperado e comece com o status "recebido";
+- o cliente consulta **apenas o próprio pedido**, pelo código dele;
+- só o usuário da cozinha, identificado pelo UID, pode **listar** os pedidos e **mudar o status**;
+- ninguém pode apagar pedidos, e a criação de novas contas está desativada no Authentication.
+
+A configuração do Firebase em `js/firebase.js` é pública por natureza: ela identifica o projeto, mas não dá acesso aos dados. Quem protege os dados são as regras.
+
+Se o Firebase estiver indisponível, o chat continua funcionando e o pedido segue normalmente pelo WhatsApp.
 
 ## Tecnologias
 
@@ -87,9 +100,12 @@ O projeto carrega o arquivo de configuração com `fetch`, então ele precisa se
 
 ```
 fregues/
-├── index.html            Página do cliente
+├── index.html            Página do cliente (chat)
+├── cozinha.html          Painel da cozinha (login e pedidos em tempo real)
+├── firestore.rules       Regras de segurança do banco
 ├── css/
-│   └── estilos.css       Identidade visual
+│   ├── estilos.css       Chat, com o tema da loja
+│   └── cozinha.css       Painel, com a identidade do Freguês
 ├── js/
 │   ├── main.js           Ponto de entrada
 │   ├── config.js         Carrega a configuração da loja
@@ -101,6 +117,9 @@ fregues/
 │   ├── fluxo-pedido.js   Roteiro da montagem do pedido
 │   ├── pedido.js         Regras e cálculo do pedido
 │   ├── whatsapp.js       Resumo e link para o WhatsApp
+│   ├── firebase.js       Conexão com o Firebase
+│   ├── banco.js          Gravação e leitura dos pedidos
+│   ├── cozinha.js        Lógica do painel da cozinha
 │   └── ia.js             Camada opcional de IA
 ├── config/
 │   └── ze-burger.json    Cardápio e regras da loja de demonstração

@@ -1,0 +1,40 @@
+rules_version = '2';
+
+// Regras de segurança do Freguês.
+// Cole este conteúdo em Firestore Database > Regras, no console do Firebase, e publique.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Só os usuários listados aqui são a cozinha (troque pelo UID do Authentication)
+    function ehCozinha() {
+      return request.auth != null && request.auth.uid in ["COLE_AQUI_O_UID_DA_COZINHA"];
+    }
+
+    function pedidoValido(pedido) {
+      return pedido.keys().hasOnly(["cliente", "itens", "subtotal", "taxa", "total", "entrega", "pagamento", "troco", "status", "criadoEm"])
+        && pedido.status == "recebido"
+        && pedido.criadoEm == request.time
+        && pedido.cliente is string && pedido.cliente.size() > 0 && pedido.cliente.size() <= 80
+        && pedido.itens is list && pedido.itens.size() > 0 && pedido.itens.size() <= 30
+        && pedido.total is number && pedido.total > 0 && pedido.total < 2000
+        && pedido.pagamento is string && pedido.pagamento.size() <= 40;
+    }
+
+    match /lojas/{lojaId}/pedidos/{pedidoId} {
+      // Qualquer pessoa pode criar um pedido válido
+      allow create: if pedidoValido(request.resource.data);
+
+      // O cliente consulta um pedido pelo id (difícil de adivinhar); só a cozinha lista todos
+      allow get: if true;
+      allow list: if ehCozinha();
+
+      // A cozinha só pode mudar o status
+      allow update: if ehCozinha()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "atualizadoEm"])
+        && request.resource.data.status in ["recebido", "preparando", "pronto", "finalizado"];
+
+      allow delete: if false;
+    }
+  }
+}

@@ -1,5 +1,6 @@
 {
   "loja": {
+    "id": "ze-burger",
     "nome": "Zé Burger",
     "descricao": "Hamburgueria fictícia criada para demonstrar o Freguês",
     "whatsapp": "5500000000000",

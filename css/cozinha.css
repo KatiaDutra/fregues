@@ -1,0 +1,299 @@
+/* cozinha.css
+   Painel da cozinha: tela de gestão, com a identidade do Freguês. */
+
+:root {
+  --creme: #FDF8E9;
+  --marrom: #592012;
+  --marrom-escuro: #351813;
+  --laranja: #FF9B36;
+  --amarelo: #FDB227;
+  --vermelho: #E3512E;
+  --verde: #708D34;
+  --branco: #FFFFFF;
+  --linha: color-mix(in srgb, var(--marrom) 15%, var(--creme));
+  --suave: color-mix(in srgb, var(--marrom) 65%, var(--creme));
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: "Atkinson Hyperlegible", system-ui, sans-serif;
+  line-height: 1.4;
+  color: var(--marrom-escuro);
+  background: var(--creme);
+}
+
+h1,
+h2,
+.topo__marca strong {
+  font-family: "Baloo 2", system-ui, sans-serif;
+}
+
+/* ---------- Topo ---------- */
+
+.topo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  padding-top: max(10px, env(safe-area-inset-top));
+  background: var(--marrom);
+  color: var(--creme);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.topo__marca {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.topo__marca strong {
+  font-size: 1.35rem;
+}
+
+.topo__marca span {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.botao-sair {
+  margin-left: auto;
+  font: inherit;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--creme) 50%, transparent);
+  background: transparent;
+  color: var(--creme);
+  cursor: pointer;
+}
+
+/* ---------- Botão principal ---------- */
+
+.botao-principal {
+  font: inherit;
+  font-weight: 700;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 12px;
+  background: var(--laranja);
+  color: var(--marrom-escuro);
+  cursor: pointer;
+}
+
+.botao-principal:hover {
+  background: color-mix(in srgb, var(--laranja) 85%, var(--marrom));
+}
+
+.botao-principal:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* ---------- Login ---------- */
+
+.login {
+  display: grid;
+  place-items: center;
+  padding: 48px 16px;
+}
+
+.login__cartao {
+  width: min(100%, 380px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 28px;
+  border-radius: 20px;
+  background: var(--branco);
+  border: 1px solid var(--linha);
+}
+
+.login__cartao h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  color: var(--marrom);
+}
+
+.login__cartao p {
+  margin: 0 0 12px;
+  color: var(--suave);
+}
+
+.login__cartao label {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.login__cartao input {
+  font: inherit;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--linha);
+  color: var(--marrom-escuro);
+}
+
+.login__cartao .login__erro {
+  margin: 0;
+  min-height: 1.4em;
+  color: var(--vermelho);
+  font-weight: 700;
+}
+
+/* ---------- Quadro ---------- */
+
+.quadro {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+
+@media (min-width: 900px) {
+  .quadro {
+    grid-template-columns: repeat(3, 1fr);
+    align-items: start;
+    padding: 20px;
+  }
+}
+
+.coluna {
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--marrom) 5%, var(--creme));
+  border-top: 6px solid var(--cor-coluna);
+  padding: 12px;
+}
+
+.coluna--recebido { --cor-coluna: var(--vermelho); }
+.coluna--preparando { --cor-coluna: var(--amarelo); }
+.coluna--pronto { --cor-coluna: var(--verde); }
+
+.coluna h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 1.25rem;
+  color: var(--marrom);
+}
+
+.contador {
+  min-width: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--cor-coluna);
+  color: var(--branco);
+  font-family: "Atkinson Hyperlegible", system-ui, sans-serif;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.coluna--preparando .contador {
+  color: var(--marrom-escuro);
+}
+
+.coluna__lista {
+  display: grid;
+  gap: 10px;
+}
+
+.coluna__vazia {
+  margin: 8px 0;
+  color: var(--suave);
+  text-align: center;
+}
+
+/* ---------- Cartão de pedido ---------- */
+
+.cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--branco);
+  border: 1px solid var(--linha);
+}
+
+.cartao p {
+  margin: 0;
+}
+
+.cartao__topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.cartao__numero {
+  font-size: 1.2rem;
+  letter-spacing: 0.04em;
+}
+
+.cartao__hora {
+  font-size: 0.85rem;
+  color: var(--suave);
+}
+
+.cartao__cliente {
+  font-weight: 700;
+}
+
+.cartao__itens {
+  margin: 0;
+  padding: 10px 0;
+  list-style: none;
+  border-block: 1px dashed var(--linha);
+  display: grid;
+  gap: 6px;
+}
+
+.cartao__itens li {
+  display: flex;
+  flex-direction: column;
+}
+
+.cartao__itens small {
+  color: var(--suave);
+  padding-left: 18px;
+}
+
+.cartao__info {
+  font-size: 0.9rem;
+}
+
+/* ---------- Aviso ---------- */
+
+.aviso {
+  position: fixed;
+  left: 50%;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 12px 20px;
+  border-radius: 999px;
+  background: var(--marrom-escuro);
+  color: var(--creme);
+  font-weight: 700;
+}
+
+/* ---------- Acessibilidade ---------- */
+
+:focus-visible {
+  outline: 3px solid var(--marrom);
+  outline-offset: 2px;
+}
+
+[hidden] {
+  display: none !important;
+}

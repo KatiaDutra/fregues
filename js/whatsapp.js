@@ -3,8 +3,9 @@
 
 import { formatarPreco, agruparItens, calcularSubtotal, calcularTaxa, calcularTotal } from "./pedido.js";
 
-export function montarMensagem(pedido, loja) {
-  const linhas = [`*Novo pedido: ${loja.loja.nome}*`, `Cliente: ${pedido.cliente}`, ""];
+export function montarMensagem(pedido, loja, numero = null) {
+  const titulo = numero ? `*Novo pedido #${numero}: ${loja.loja.nome}*` : `*Novo pedido: ${loja.loja.nome}*`;
+  const linhas = [titulo, `Cliente: ${pedido.cliente}`, ""];
 
   agruparItens(pedido, loja).forEach((grupo) => {
     linhas.push(`${grupo.quantidade}x ${grupo.descricao.titulo}: ${formatarPreco(grupo.precoTotal)}`);

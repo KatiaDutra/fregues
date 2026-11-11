@@ -3,7 +3,7 @@
 // burger, ponto da carne, adicionais, combo, outros itens, entrega, pagamento, nome, resumo e envio.
 
 import { perguntar, perguntarVarios, perguntarTexto, botResponde, PedidoCancelado } from "./conversa.js";
-import { atualizarResumo, definirEtapa } from "./ui.js";
+import { atualizarResumo, definirEtapa, adicionarMensagem } from "./ui.js";
 import { statusDaLoja } from "./horario.js";
 import {
   criarPedido, formatarPreco, precoDoCombo, precoDoItem, agruparItens, resumoCurto,
@@ -235,12 +235,13 @@ async function removerItem() {
   atualizarBarra();
 }
 
-function criarBotaoWhatsApp(link) {
+function criarBotaoWhatsApp(link, numero) {
   const bloco = document.createDocumentFragment();
   const texto = document.createElement("p");
+  const recebido = numero ? `Pedido #${numero} registrado! ` : "Pedido pronto! ";
   texto.textContent = loja.loja.demonstracao
-    ? "Pedido pronto! Como esta é uma demonstração, o WhatsApp vai abrir para você escolher para quem enviar."
-    : "Pedido pronto! Toque no botão para enviar pelo WhatsApp da loja.";
+    ? `${recebido}Como esta é uma demonstração, o WhatsApp vai abrir para você escolher para quem enviar.`
+    : `${recebido}Toque no botão para enviar pelo WhatsApp da loja.`;
   const botao = document.createElement("a");
   botao.className = "botao-whatsapp";
   botao.href = link;
@@ -249,6 +250,39 @@ function criarBotaoWhatsApp(link) {
   botao.textContent = "Enviar pelo WhatsApp";
   bloco.append(texto, botao);
   return bloco;
+}
+
+// ---------- Banco de dados e acompanhamento ----------
+
+// O banco é carregado só quando o pedido é enviado. Se o Firebase estiver fora do ar,
+// o restante do chat continua funcionando e o pedido segue pelo WhatsApp.
+async function registrarPedido() {
+  try {
+    const banco = await import("./banco.js");
+    const id = await banco.salvarPedido(pedido, loja);
+    return { banco, id, numero: banco.numeroDoPedido(id) };
+  } catch (erro) {
+    console.error("Não foi possível salvar o pedido no banco:", erro);
+    return null;
+  }
+}
+
+const MENSAGENS_DE_STATUS = {
+  recebido: () => "A loja recebeu seu pedido. Assim que começar o preparo, eu te aviso por aqui.",
+  preparando: () => "Seu pedido está sendo preparado! 👨‍🍳",
+  pronto: (entrega) => (entrega.tipo === "entrega" ? "Seu pedido está pronto e já vai sair para entrega! 🛵" : "Seu pedido está pronto para retirada no balcão!"),
+  finalizado: () => "Pedido concluído. Bom apetite! 🍔",
+};
+
+// Escuta o pedido no banco e avisa o cliente a cada mudança de status
+function acompanhar(registro) {
+  let ultimoStatus = null;
+  const parar = registro.banco.acompanharPedido(loja.loja.id, registro.id, (dados) => {
+    if (dados.status === ultimoStatus) return;
+    ultimoStatus = dados.status;
+    adicionarMensagem("bot", MENSAGENS_DE_STATUS[dados.status](dados.entrega));
+    if (dados.status === "finalizado") parar();
+  });
 }
 
 // ---------- Fluxo completo ----------
@@ -267,6 +301,8 @@ export async function fazerPedido(configuracaoDaLoja) {
     }
     await botResponde("A loja está fechada agora, mas como esta é uma demonstração, você pode testar o pedido normalmente.");
   }
+
+  let enviado = false;
 
   try {
     await escolherBurger();
@@ -303,8 +339,15 @@ export async function fazerPedido(configuracaoDaLoja) {
       if (pedido.troco && pedido.troco <= calcularTotal(pedido, loja)) await escolherPagamento();
     }
 
-    const link = criarLink(loja, montarMensagem(pedido, loja));
-    await botResponde(criarBotaoWhatsApp(link));
+    const registro = await registrarPedido();
+    const link = criarLink(loja, montarMensagem(pedido, loja, registro?.numero));
+    await botResponde(criarBotaoWhatsApp(link, registro?.numero));
+
+    if (registro) {
+      enviado = true;
+      definirEtapa(2);
+      acompanhar(registro);
+    }
   } catch (erro) {
     if (erro instanceof PedidoCancelado) {
       await botResponde("Pedido cancelado. Quando quiser, é só começar de novo.");
@@ -315,5 +358,6 @@ export async function fazerPedido(configuracaoDaLoja) {
   }
 
   atualizarResumo(null);
-  definirEtapa(0);
+  // Com o pedido enviado, a jornada fica em "Cozinha" enquanto o cliente acompanha o status
+  if (!enviado) definirEtapa(0);
 }

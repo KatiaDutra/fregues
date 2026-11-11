@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Cozinha | Freguês</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#592012">
+  <link rel="icon" href="assets/img/favicon.ico" sizes="48x48">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Baloo+2:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/cozinha.css">
+</head>
+<body>
+  <header class="topo">
+    <img src="assets/img/icone-redondo.png" alt="" width="40" height="40">
+    <div class="topo__marca">
+      <strong>Freguês</strong>
+      <span id="nome-da-loja">Cozinha</span>
+    </div>
+    <button id="botao-sair" class="botao-sair" type="button" hidden>Sair</button>
+  </header>
+
+  <!-- Login: só a cozinha da loja acessa os pedidos -->
+  <main id="tela-login" class="login" hidden>
+    <form id="formulario-login" class="login__cartao">
+      <h1>Painel da cozinha</h1>
+      <p>Entre com o login da cozinha para ver os pedidos.</p>
+
+      <label for="email">E-mail</label>
+      <input id="email" type="email" autocomplete="username" required>
+
+      <label for="senha">Senha</label>
+      <input id="senha" type="password" autocomplete="current-password" required>
+
+      <p id="erro-login" class="login__erro" role="alert"></p>
+      <button type="submit" class="botao-principal">Entrar</button>
+    </form>
+  </main>
+
+  <!-- Quadro de pedidos -->
+  <main id="tela-quadro" class="quadro" hidden>
+    <section class="coluna coluna--recebido" aria-labelledby="titulo-recebido">
+      <h2 id="titulo-recebido">Recebidos <span class="contador" id="contador-recebido">0</span></h2>
+      <div class="coluna__lista" id="lista-recebido"></div>
+    </section>
+    <section class="coluna coluna--preparando" aria-labelledby="titulo-preparando">
+      <h2 id="titulo-preparando">Em preparo <span class="contador" id="contador-preparando">0</span></h2>
+      <div class="coluna__lista" id="lista-preparando"></div>
+    </section>
+    <section class="coluna coluna--pronto" aria-labelledby="titulo-pronto">
+      <h2 id="titulo-pronto">Prontos <span class="contador" id="contador-pronto">0</span></h2>
+      <div class="coluna__lista" id="lista-pronto"></div>
+    </section>
+  </main>
+
+  <p id="aviso" class="aviso" role="status" hidden></p>
+
+  <script type="module" src="js/cozinha.js"></script>
+</body>
+</html>
