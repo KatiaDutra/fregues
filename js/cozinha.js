@@ -5,7 +5,7 @@
 import { app } from "./firebase.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { carregarConfiguracao } from "./config.js";
-import { acompanharPedidosRecentes, mudarStatus, numeroDoPedido } from "./banco.js";
+import { acompanharPedidosRecentes, mudarStatus, finalizarPedido, numeroDoPedido } from "./banco.js";
 import { formatarPreco } from "./pedido.js";
 
 const auth = getAuth(app);
@@ -100,6 +100,14 @@ function criarCartao(pedido) {
 
   cartao.append(criarElemento("p", "cartao__cliente", pedido.cliente));
 
+  // Etiquetas de fidelidade
+  if (pedido.clienteId || pedido.usaPremio) {
+    const etiquetas = criarElemento("div", "cartao__etiquetas");
+    if (pedido.clienteId) etiquetas.append(criarElemento("span", "etiqueta", "Cartão fidelidade"));
+    if (pedido.usaPremio) etiquetas.append(criarElemento("span", "etiqueta etiqueta--premio", "Usando prêmio"));
+    cartao.append(etiquetas);
+  }
+
   // Itens
   const lista = criarElemento("ul", "cartao__itens");
   pedido.itens.forEach((item) => {
@@ -125,7 +133,13 @@ function criarCartao(pedido) {
   botao.addEventListener("click", async () => {
     botao.disabled = true;
     try {
-      await mudarStatus(loja.loja.id, pedido.id, passo.status);
+      // Ao finalizar, o selo do cliente é registrado junto
+      if (passo.status === "finalizado") {
+        const alerta = await finalizarPedido(loja, pedido);
+        if (alerta) mostrarAviso(alerta);
+      } else {
+        await mudarStatus(loja.loja.id, pedido.id, passo.status);
+      }
     } catch (erro) {
       console.error(erro);
       botao.disabled = false;

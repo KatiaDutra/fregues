@@ -10,6 +10,7 @@ import {
   calcularSubtotal, calcularTaxa, calcularTotal, faltaParaMinimo,
 } from "./pedido.js";
 import { montarMensagem, criarLink } from "./whatsapp.js";
+import { normalizarTelefone, gerarIdDoCliente, temPremio, criarCartaoFidelidade } from "./fidelidade.js";
 
 let loja = null;
 let pedido = null;
@@ -173,6 +174,62 @@ async function escolherPagamento() {
   pedido.troco = valor;
 }
 
+// ---------- Fidelidade ----------
+
+const PULAR = { id: "pular", rotulo: "Pular", secundaria: true };
+
+async function carregarBanco() {
+  try {
+    return await import("./banco.js");
+  } catch (erro) {
+    console.error("Banco indisponível:", erro);
+    return null;
+  }
+}
+
+// Pede o telefone para o cartão fidelidade e, se houver prêmio, oferece usar agora
+async function identificarCliente() {
+  let resposta = await perguntarTexto(
+    "Quer juntar selos no cartão fidelidade? Me passa seu WhatsApp com DDD. Ele fica guardado de forma protegida e só serve para o cartão.",
+    [PULAR]
+  );
+
+  let telefone = typeof resposta === "string" ? normalizarTelefone(resposta) : null;
+  while (typeof resposta === "string" && !telefone) {
+    resposta = await perguntarTexto("Não reconheci esse número. Digite com DDD, por exemplo 51 99999-0000.", [PULAR]);
+    telefone = typeof resposta === "string" ? normalizarTelefone(resposta) : null;
+  }
+  if (!telefone) return;
+
+  pedido.clienteId = await gerarIdDoCliente(telefone, loja.loja.id);
+
+  const banco = await carregarBanco();
+  if (!banco) return;
+
+  let selos = 0;
+  try {
+    selos = await banco.buscarSelos(loja, pedido.clienteId);
+  } catch (erro) {
+    console.error(erro);
+    return;
+  }
+
+  if (!temPremio(selos, loja)) {
+    await botResponde(selos ? `Você já tem ${selos} selos. Este pedido vale mais um!` : "Este é o seu primeiro selo. Bem-vindo ao cartão fidelidade!");
+    return;
+  }
+
+  const usar = await perguntar(`Você tem um prêmio: ${loja.fidelidade.premio}! Quer usar neste pedido?`, [
+    { id: "sim", rotulo: "Quero usar agora" },
+    { id: "nao", rotulo: "Guardar para depois", secundaria: true },
+  ]);
+  if (usar.id === "sim") {
+    pedido.usaPremio = true;
+    pedido.itens.push({ tipo: "premio", id: "premio", nome: `Prêmio fidelidade: ${loja.fidelidade.premio}`, preco: 0 });
+    atualizarBarra();
+  }
+}
+
 // ---------- Resumo ----------
 
 function criarResumo() {
@@ -231,6 +288,7 @@ async function removerItem() {
 
   // Remove uma unidade do item escolhido
   const indice = grupos[Number(escolha.id)].indices.at(-1);
+  if (pedido.itens[indice].tipo === "premio") pedido.usaPremio = false;
   pedido.itens.splice(indice, 1);
   atualizarBarra();
 }
@@ -258,7 +316,8 @@ function criarBotaoWhatsApp(link, numero) {
 // o restante do chat continua funcionando e o pedido segue pelo WhatsApp.
 async function registrarPedido() {
   try {
-    const banco = await import("./banco.js");
+    const banco = await carregarBanco();
+    if (!banco) return null;
     const id = await banco.salvarPedido(pedido, loja);
     return { banco, id, numero: banco.numeroDoPedido(id) };
   } catch (erro) {
@@ -281,8 +340,26 @@ function acompanhar(registro) {
     if (dados.status === ultimoStatus) return;
     ultimoStatus = dados.status;
     adicionarMensagem("bot", MENSAGENS_DE_STATUS[dados.status](dados.entrega));
-    if (dados.status === "finalizado") parar();
+    if (dados.status === "finalizado") {
+      parar();
+      if (dados.clienteId) mostrarSeloGanho(registro.banco, dados.clienteId);
+    }
   });
+}
+
+// Depois que a cozinha finaliza, o selo já está no cartão: mostra o cartão atualizado
+async function mostrarSeloGanho(banco, clienteId) {
+  try {
+    const selos = await banco.buscarSelos(loja, clienteId);
+    definirEtapa(3);
+    const bloco = document.createDocumentFragment();
+    const texto = document.createElement("p");
+    texto.textContent = "Você ganhou mais um selo!";
+    bloco.append(texto, criarCartaoFidelidade(selos, loja));
+    adicionarMensagem("bot", bloco);
+  } catch (erro) {
+    console.error(erro);
+  }
 }
 
 // ---------- Fluxo completo ----------
@@ -313,6 +390,7 @@ export async function fazerPedido(configuracaoDaLoja) {
     if (pedido.entrega.tipo === "entrega") await perguntarEndereco();
     await escolherPagamento();
     pedido.cliente = (await perguntarTexto("Para finalizar, qual é o seu nome?")).trim();
+    await identificarCliente();
 
     // Resumo: o cliente pode adicionar, remover ou enviar
     while (true) {
@@ -329,7 +407,7 @@ export async function fazerPedido(configuracaoDaLoja) {
       if (escolha.id === "mais") await adicionarMais();
       if (escolha.id === "remover") await removerItem();
 
-      if (pedido.itens.length === 0) {
+      if (pedido.itens.filter((item) => item.tipo !== "premio").length === 0 && !pedido.usaPremio) {
         await botResponde("Seu pedido ficou vazio. Vamos começar de novo?");
         await escolherBurger();
         await adicionarMais();

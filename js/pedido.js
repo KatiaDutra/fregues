@@ -14,6 +14,8 @@ export function criarPedido() {
     pagamento: null,
     troco: null,
     cliente: null,
+    clienteId: null, // id protegido do cartão fidelidade
+    usaPremio: false,
   };
 }
 

@@ -67,12 +67,20 @@ export async function perguntarVarios(conteudo, opcoes, rotuloConfirmar, aoMudar
 }
 
 // Pergunta aberta: o cliente responde digitando. Devolve o texto.
-export async function perguntarTexto(conteudo) {
+// Pode ter botões de atalho (como "Pular"); nesse caso, devolve a opção clicada.
+export async function perguntarTexto(conteudo, atalhos = []) {
   if (conteudo) await botResponde(conteudo);
-  limparOpcoes();
 
   return new Promise((resolver, rejeitar) => {
-    pendente = { tipo: "texto", resolver, rejeitar };
+    pendente = { tipo: "texto", opcoes: atalhos, resolver, rejeitar };
+    if (atalhos.length) {
+      mostrarOpcoes(atalhos, (opcao) => {
+        adicionarMensagem("cliente", opcao.rotulo);
+        concluir(opcao);
+      });
+    } else {
+      limparOpcoes();
+    }
   });
 }
 
@@ -113,7 +121,9 @@ const PALAVRAS_DE_CONFIRMAR = ["pronto", "nenhum", "nenhuma", "nao", "sem", "so 
 // Devolve true se o texto foi usado como resposta.
 export async function responderPendente(texto) {
   if (pendente.tipo === "texto") {
-    concluir(texto);
+    // Digitar o nome de um atalho ("pular") vale como clicar nele
+    const atalho = pendente.opcoes.find((o) => normalizar(o.rotulo) === normalizar(texto));
+    concluir(atalho ?? texto);
     return true;
   }
 

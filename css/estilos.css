@@ -372,6 +372,52 @@ body {
   background: color-mix(in srgb, var(--cor-principal) 85%, var(--cor-texto));
 }
 
+/* ---------- Cartão fidelidade ---------- */
+
+.cartao-fidelidade {
+  margin-top: 4px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--cor-principal);
+  color: var(--cor-texto-sobre-principal);
+}
+
+.mensagem__balao p + .cartao-fidelidade {
+  margin-top: 8px;
+}
+
+.cartao-fidelidade__titulo {
+  font-family: var(--fonte-titulos);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.cartao-fidelidade__selos {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.selo {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px dashed color-mix(in srgb, var(--cor-texto-sobre-principal) 55%, transparent);
+}
+
+.selo--cheio {
+  border: 2px solid var(--cor-destaque);
+  background: var(--cor-destaque) center / cover;
+}
+
+.cartao-fidelidade__legenda {
+  font-weight: 700;
+}
+
+.cartao-fidelidade small {
+  opacity: 0.85;
+}
+
 /* ---------- Campo de mensagem ---------- */
 
 .escrever {

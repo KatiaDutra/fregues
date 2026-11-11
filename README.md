@@ -54,9 +54,9 @@ O Freguês funciona como **white-label**: no chat, o cliente final vê as cores,
 - [x] Painel da cozinha com status do pedido em tempo real
 
 ### Versão 2: fidelidade
-- [ ] Cartão fidelidade identificado pelo telefone
-- [ ] Selo automático quando o pedido é concluído
-- [ ] Resgate do prêmio
+- [x] Cartão fidelidade identificado pelo telefone
+- [x] Selo automático quando o pedido é concluído
+- [x] Resgate do prêmio
 
 ### Versão 3: pós-venda
 - [ ] Avaliação do pedido de 1 a 5
@@ -70,7 +70,12 @@ Os pedidos ficam no Firestore, protegidos pelas regras em `firestore.rules`:
 - qualquer pessoa pode **criar** um pedido, desde que ele tenha o formato esperado e comece com o status "recebido";
 - o cliente consulta **apenas o próprio pedido**, pelo código dele;
 - só o usuário da cozinha, identificado pelo UID, pode **listar** os pedidos e **mudar o status**;
-- ninguém pode apagar pedidos, e a criação de novas contas está desativada no Authentication.
+- ninguém pode apagar pedidos, e a criação de novas contas está desativada no Authentication;
+- os **selos de fidelidade** só podem ser registrados pela cozinha, ao finalizar o pedido, então nenhum cliente consegue dar selos a si mesmo.
+
+### Privacidade no cartão fidelidade
+
+O telefone do cliente **não é salvo no banco**. O navegador gera um código SHA-256 a partir do telefone, e é esse código que identifica o cartão. O cartão guarda apenas o primeiro nome e as datas dos selos, sem endereço nem histórico de compras. O cliente pode pular essa etapa e fazer o pedido normalmente.
 
 A configuração do Firebase em `js/firebase.js` é pública por natureza: ela identifica o projeto, mas não dá acesso aos dados. Quem protege os dados são as regras.
 
@@ -120,6 +125,7 @@ fregues/
 │   ├── firebase.js       Conexão com o Firebase
 │   ├── banco.js          Gravação e leitura dos pedidos
 │   ├── cozinha.js        Lógica do painel da cozinha
+│   ├── fidelidade.js     Telefone protegido, selos e desenho do cartão
 │   └── ia.js             Camada opcional de IA
 ├── config/
 │   └── ze-burger.json    Cardápio e regras da loja de demonstração

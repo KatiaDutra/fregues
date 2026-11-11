@@ -12,13 +12,15 @@ service cloud.firestore {
     }
 
     function pedidoValido(pedido) {
-      return pedido.keys().hasOnly(["cliente", "itens", "subtotal", "taxa", "total", "entrega", "pagamento", "troco", "status", "criadoEm"])
+      return pedido.keys().hasOnly(["cliente", "itens", "subtotal", "taxa", "total", "entrega", "pagamento", "troco", "clienteId", "usaPremio", "status", "criadoEm"])
         && pedido.status == "recebido"
         && pedido.criadoEm == request.time
         && pedido.cliente is string && pedido.cliente.size() > 0 && pedido.cliente.size() <= 80
         && pedido.itens is list && pedido.itens.size() > 0 && pedido.itens.size() <= 30
         && pedido.total is number && pedido.total > 0 && pedido.total < 2000
-        && pedido.pagamento is string && pedido.pagamento.size() <= 40;
+        && pedido.pagamento is string && pedido.pagamento.size() <= 40
+        && (pedido.clienteId == null || (pedido.clienteId is string && pedido.clienteId.size() == 64))
+        && pedido.usaPremio is bool;
     }
 
     match /lojas/{lojaId}/pedidos/{pedidoId} {
@@ -34,6 +36,15 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "atualizadoEm"])
         && request.resource.data.status in ["recebido", "preparando", "pronto", "finalizado"];
 
+      allow delete: if false;
+    }
+
+    // Cartões fidelidade: o cliente consulta o próprio cartão pelo id protegido.
+    // Só a cozinha cria e atualiza cartões, então ninguém dá selos a si mesmo.
+    match /lojas/{lojaId}/clientes/{clienteId} {
+      allow get: if true;
+      allow list: if ehCozinha();
+      allow create, update: if ehCozinha();
       allow delete: if false;
     }
   }

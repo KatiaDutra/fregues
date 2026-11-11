@@ -4,20 +4,23 @@
 // Nesta etapa o bot entende texto livre por palavras-chave.
 
 import { adicionarMensagem, mostrarOpcoes, limparOpcoes, definirEtapa } from "./ui.js";
-import { botResponde, normalizar, contemPalavra, haPerguntaPendente, responderPendente, cancelarPergunta } from "./conversa.js";
+import { botResponde, normalizar, contemPalavra, haPerguntaPendente, responderPendente, cancelarPergunta, perguntarTexto, PedidoCancelado } from "./conversa.js";
+import { normalizarTelefone, gerarIdDoCliente, criarCartaoFidelidade } from "./fidelidade.js";
 import { statusDaLoja, descreverDias } from "./horario.js";
 import { formatarPreco } from "./pedido.js";
 import { fazerPedido } from "./fluxo-pedido.js";
 
 let loja = null;
-let fazendoPedido = false;
+// true enquanto o bot conduz uma conversa com perguntas (pedido ou cartão fidelidade)
+let emFluxo = false;
 
 const OPCOES_PRINCIPAIS = [
   { id: "pedido", rotulo: "Fazer pedido" },
   { id: "cardapio", rotulo: "Ver cardápio" },
   { id: "horario", rotulo: "Horário" },
-  { id: "entrega", rotulo: "Entrega e taxas" },
-  { id: "pagamento", rotulo: "Formas de pagamento" },
+  { id: "entrega", rotulo: "Entrega" },
+  { id: "pagamento", rotulo: "Pagamento" },
+  { id: "fidelidade", rotulo: "Cartão fidelidade" },
 ];
 
 // Palavras que levam a cada resposta quando o cliente digita.
@@ -28,6 +31,7 @@ const PALAVRAS_CHAVE = {
   cardapio: ["cardapio", "menu", "lanche", "lanches", "burger", "burgers", "hamburguer", "opcoes"],
   horario: ["horario", "abre", "abrem", "fecha", "fecham", "aberto", "funciona", "funcionamento"],
   entrega: ["entrega", "entregam", "entregar", "taxa", "bairro", "delivery", "frete"],
+  fidelidade: ["fidelidade", "selo", "selos", "premio", "cartao fidelidade"],
   pagamento: ["pagamento", "pagar", "pix", "cartao", "dinheiro", "troco"],
   saudacao: ["oi", "ola", "bom dia", "boa tarde", "boa noite", "e ai"],
 };
@@ -110,9 +114,45 @@ function mostrarMenu() {
 }
 
 async function iniciarPedido() {
-  fazendoPedido = true;
+  emFluxo = true;
   await fazerPedido(loja);
-  fazendoPedido = false;
+  emFluxo = false;
+  mostrarMenu();
+}
+
+// Consulta do cartão fidelidade pelo telefone
+async function consultarCartao() {
+  emFluxo = true;
+  const voltar = { id: "voltar", rotulo: "Voltar", secundaria: true };
+
+  try {
+    let resposta = await perguntarTexto("Qual é o seu WhatsApp com DDD? É por ele que encontro seu cartão.", [voltar]);
+    let telefone = typeof resposta === "string" ? normalizarTelefone(resposta) : null;
+
+    while (typeof resposta === "string" && !telefone) {
+      resposta = await perguntarTexto("Não reconheci esse número. Digite com DDD, por exemplo 51 99999-0000.", [voltar]);
+      telefone = typeof resposta === "string" ? normalizarTelefone(resposta) : null;
+    }
+
+    if (telefone) {
+      const banco = await import("./banco.js");
+      const selos = await banco.buscarSelos(loja, await gerarIdDoCliente(telefone, loja.loja.id));
+
+      if (selos === 0) {
+        await botResponde("Ainda não encontrei selos para esse número. Faça um pedido informando seu WhatsApp para começar a juntar!");
+      } else {
+        definirEtapa(3);
+        await botResponde(criarCartaoFidelidade(selos, loja));
+      }
+    }
+  } catch (erro) {
+    if (!(erro instanceof PedidoCancelado)) {
+      console.error(erro);
+      await botResponde("Não consegui abrir o cartão agora. Tente de novo em instantes.");
+    }
+  }
+
+  emFluxo = false;
   mostrarMenu();
 }
 
@@ -120,6 +160,10 @@ async function responder(idDaResposta) {
   limparOpcoes();
   if (idDaResposta === "pedido") {
     await iniciarPedido();
+    return;
+  }
+  if (idDaResposta === "fidelidade") {
+    await consultarCartao();
     return;
   }
   await botResponde(RESPOSTAS[idDaResposta]());
@@ -135,8 +179,8 @@ export async function responderTexto(texto) {
   adicionarMensagem("cliente", texto);
   const textoNormalizado = normalizar(texto);
 
-  // Durante o pedido, o texto responde à pergunta atual
-  if (fazendoPedido) {
+  // Durante o pedido ou a consulta do cartão, o texto responde à pergunta atual
+  if (emFluxo) {
     if (contemPalavra(textoNormalizado, "cancelar")) {
       cancelarPergunta();
       return;
