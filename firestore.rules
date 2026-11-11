@@ -8,7 +8,7 @@ service cloud.firestore {
 
     // Só os usuários listados aqui são a cozinha (troque pelo UID do Authentication)
     function ehCozinha() {
-      return request.auth != null && request.auth.uid in ["COLE_AQUI_O_UID_DA_COZINHA"];
+      return request.auth != null && request.auth.uid in ["Nm3XdX57fQawPhLU63U6rQStqLe2"];
     }
 
     function pedidoValido(pedido) {
