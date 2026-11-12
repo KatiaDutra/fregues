@@ -23,8 +23,9 @@ O Freguês é um assistente de atendimento que acompanha toda a jornada do clien
 1. **Acolhe** o cliente, informa horário, cardápio e responde dúvidas.
 2. **Monta o pedido** com o cliente, calculando o preço em tempo real.
 3. **Envia o pedido** organizado para o WhatsApp da loja e para o painel da cozinha.
-4. **Registra selos** no cartão fidelidade do cliente.
-5. **Faz o pós-venda**, pedindo uma avaliação e convidando o cliente a voltar.
+4. **Controla o pagamento**: o cliente paga no pedido ou no recebimento, e o administrador confirma cada pagamento.
+5. **Registra selos** no cartão fidelidade, somente depois do pagamento confirmado.
+6. **Faz o pós-venda**, pedindo uma avaliação e convidando o cliente a voltar.
 
 Tudo funciona com ferramentas gratuitas e sem a API paga do WhatsApp.
 
@@ -41,7 +42,32 @@ No Freguês, **a IA entende e o sistema decide**.
 
 O cardápio, os preços, os horários, as dúvidas frequentes e as regras da loja ficam em um único arquivo de configuração (`config/ze-burger.json`). Trocando esse arquivo, o Freguês passa a atender outro negócio, sem alterar o código.
 
-O Freguês funciona como **white-label**: no chat, o cliente final vê as cores, o nome e o atendente da loja. A marca do Freguês aparece só no rodapé e, futuramente, nas telas de gestão usadas pelo dono do negócio.
+O Freguês funciona como **white-label**: no chat, o cliente final vê as cores, o nome e o atendente da loja. A marca do Freguês aparece só no rodapé e nas telas de gestão usadas pela equipe da loja (cozinha e pagamentos).
+
+## Perfis de acesso
+
+O Freguês tem três perfis, cada um com uma tela e permissões próprias:
+
+| Perfil | Tela | O que faz |
+|---|---|---|
+| Cliente | `index.html` | Conversa com o bot, monta e envia o pedido, acompanha o status e consulta o cartão fidelidade. Não precisa de login. |
+| Cozinha | `cozinha.html` | Vê os pedidos liberados e avança o preparo. Sabe se o pedido já está pago ou se precisa cobrar na entrega, mas não mexe em pagamentos nem em selos. |
+| Administrador | `admin.html` | Confere e confirma os pagamentos, marca pedidos não pagos, cancela pedidos sem pagamento e acompanha o caixa do dia. |
+
+Separar quem produz de quem confere o dinheiro é um princípio básico de controle: impede que um pedido não pago gere selo de fidelidade. Uma mesma pessoa pode ter os dois papéis, o que é comum em negócios pequenos, e nesse caso navega entre as duas telas pelo topo.
+
+### Como funciona o pagamento
+
+Cada loja escolhe no arquivo de configuração quais formas aceita em cada momento:
+
+| Momento | Formas na demonstração | Quando vai para a cozinha |
+|---|---|---|
+| No pedido | Pix (o chat mostra a chave) ou link de pagamento por cartão, enviado pela loja no WhatsApp | Só depois que o admin confere o extrato e confirma |
+| Na entrega ou na retirada | Cartão na maquininha, Pix ou dinheiro | Na hora; o admin confirma depois de receber |
+
+O selo de fidelidade é registrado **na mesma operação** em que o admin confirma o pagamento. Pedido marcado como não pago fica numa lista própria e não gera selo; se o cliente pagar depois, o admin confirma por lá. Uma confirmação não pode ser desfeita, porque o selo já foi registrado junto.
+
+A confirmação é manual de propósito: com custo zero, não há integração com banco ou maquininha. Num próximo passo, essa conferência pode ser automatizada com a API de um meio de pagamento.
 
 ## Roteiro de desenvolvimento
 
@@ -55,23 +81,37 @@ O Freguês funciona como **white-label**: no chat, o cliente final vê as cores,
 
 ### Versão 2: fidelidade
 - [x] Cartão fidelidade identificado pelo telefone
-- [x] Selo automático quando o pedido é concluído
+- [x] Selo registrado automaticamente para o cliente
 - [x] Resgate do prêmio
 
-### Versão 3: pós-venda
+### Versão 3: perfis e pagamentos
+- [x] Três perfis com permissões próprias: cliente, cozinha e administrador
+- [x] Pagamento no pedido ou no recebimento, com as formas definidas por loja
+- [x] Chave Pix com botão de copiar no chat
+- [x] Painel do administrador com confirmação de pagamento, não pagos, cancelamento e caixa do dia
+- [x] Pedido pago no ato só chega à cozinha depois da confirmação
+- [x] Selo de fidelidade registrado somente com o pagamento confirmado
+
+### Versão 4: pós-venda
 - [ ] Avaliação do pedido de 1 a 5
 - [ ] Mensagem de agradecimento pronta para o dono enviar
 - [ ] Resumo das avaliações com IA
 
+### Versão 5: aplicativo e integração
+- [ ] Chat instalável no celular (PWA), com o ícone da loja
+- [ ] Integração com o [Centraliza](https://github.com/KatiaDutra/centraliza): pedidos não pagos e avaliações ruins viram atendimentos
+- [ ] Vendas confirmadas em formato padronizado, com exportação para planilha e BI
+
 ## Segurança dos dados
 
-Os pedidos ficam no Firestore, protegidos pelas regras em `firestore.rules`:
+Os dados ficam no Firestore, protegidos pelas regras em `firestore.rules`. Os papéis da equipe ficam em documentos `equipe/{uid}`, criados à mão no console do Firebase, e o próprio site não consegue alterá-los.
 
-- qualquer pessoa pode **criar** um pedido, desde que ele tenha o formato esperado e comece com o status "recebido";
+- qualquer pessoa pode **criar** um pedido, desde que ele tenha o formato esperado, comece com o pagamento pendente e no status certo para o momento do pagamento;
 - o cliente consulta **apenas o próprio pedido**, pelo código dele;
-- só o usuário da cozinha, identificado pelo UID, pode **listar** os pedidos e **mudar o status**;
-- ninguém pode apagar pedidos, e a criação de novas contas está desativada no Authentication;
-- os **selos de fidelidade** só podem ser registrados pela cozinha, ao finalizar o pedido, então nenhum cliente consegue dar selos a si mesmo.
+- a **cozinha** só avança o preparo, na ordem certa, e só de pedidos já liberados: um pedido esperando pagamento não pode ser preparado;
+- o **administrador** é o único que muda a situação do pagamento, e um pagamento confirmado não pode ser desfeito;
+- os **selos de fidelidade** só podem ser registrados pelo administrador, então nenhum selo nasce sem pagamento confirmado e nenhum cliente consegue dar selos a si mesmo;
+- ninguém pode apagar pedidos, e a criação de novas contas está desativada no Authentication.
 
 ### Privacidade no cartão fidelidade
 
@@ -107,10 +147,12 @@ O projeto carrega o arquivo de configuração com `fetch`, então ele precisa se
 fregues/
 ├── index.html            Página do cliente (chat)
 ├── cozinha.html          Painel da cozinha (login e pedidos em tempo real)
+├── admin.html            Painel do administrador (pagamentos e caixa do dia)
 ├── firestore.rules       Regras de segurança do banco
 ├── css/
 │   ├── estilos.css       Chat, com o tema da loja
-│   └── cozinha.css       Painel, com a identidade do Freguês
+│   ├── cozinha.css       Base dos painéis, com a identidade do Freguês
+│   └── admin.css         Caixa do dia e filas de pagamento
 ├── js/
 │   ├── main.js           Ponto de entrada
 │   ├── config.js         Carrega a configuração da loja
@@ -123,8 +165,10 @@ fregues/
 │   ├── pedido.js         Regras e cálculo do pedido
 │   ├── whatsapp.js       Resumo e link para o WhatsApp
 │   ├── firebase.js       Conexão com o Firebase
-│   ├── banco.js          Gravação e leitura dos pedidos
+│   ├── banco.js          Pedidos, pagamentos, equipe e selos no Firestore
+│   ├── acesso.js         Login da equipe e conferência dos papéis
 │   ├── cozinha.js        Lógica do painel da cozinha
+│   ├── admin.js          Lógica do painel do administrador
 │   ├── fidelidade.js     Telefone protegido, selos e desenho do cartão
 │   └── ia.js             Camada opcional de IA
 ├── config/

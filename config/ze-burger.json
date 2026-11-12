@@ -49,11 +49,19 @@
       }
     ]
   },
-  "pagamento": [
-    "Pix",
-    "Cartão na entrega",
-    "Dinheiro"
-  ],
+  "pagamento": {
+    "noPedido": [
+      "Pix",
+      "Link de pagamento (cartão)"
+    ],
+    "noRecebimento": [
+      "Cartão (maquininha)",
+      "Pix",
+      "Dinheiro"
+    ],
+    "chavePix": "pix@zeburger.demo",
+    "recebedorPix": "Zé Burger (demonstração)"
+  },
   "cardapio": {
     "burgers": [
       {

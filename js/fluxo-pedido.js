@@ -7,7 +7,7 @@ import { atualizarResumo, definirEtapa, adicionarMensagem } from "./ui.js";
 import { statusDaLoja } from "./horario.js";
 import {
   criarPedido, formatarPreco, precoDoCombo, precoDoItem, agruparItens, resumoCurto,
-  calcularSubtotal, calcularTaxa, calcularTotal, faltaParaMinimo,
+  calcularSubtotal, calcularTaxa, calcularTotal, faltaParaMinimo, opcoesDePagamento, descreverPagamento,
 } from "./pedido.js";
 import { montarMensagem, criarLink } from "./whatsapp.js";
 import { normalizarTelefone, gerarIdDoCliente, temPremio, criarCartaoFidelidade } from "./fidelidade.js";
@@ -154,8 +154,20 @@ function lerValor(texto) {
 }
 
 async function escolherPagamento() {
-  const opcoes = loja.pagamento.map((forma) => ({ id: forma, rotulo: forma }));
-  pedido.pagamento = (await perguntar("Como prefere pagar?", opcoes)).rotulo;
+  const { noPedido, noRecebimento } = loja.pagamento;
+  const momentos = [];
+  if (noPedido.length) momentos.push({ id: "pedido", rotulo: "Pagar agora" });
+  if (noRecebimento.length) {
+    momentos.push({ id: "recebimento", rotulo: pedido.entrega.tipo === "entrega" ? "Pagar na entrega" : "Pagar na retirada" });
+  }
+
+  // Se a loja só aceita um momento, não precisa perguntar
+  pedido.momentoPagamento = momentos.length > 1
+    ? (await perguntar("Quer pagar agora ou no recebimento?", momentos)).id
+    : momentos[0].id;
+
+  const formas = opcoesDePagamento(loja, pedido.momentoPagamento).map((forma) => ({ id: forma, rotulo: forma }));
+  pedido.pagamento = formas.length > 1 ? (await perguntar("Qual forma de pagamento?", formas)).rotulo : formas[0].rotulo;
   pedido.troco = null;
 
   if (pedido.pagamento !== "Dinheiro") return;
@@ -215,7 +227,9 @@ async function identificarCliente() {
   }
 
   if (!temPremio(selos, loja)) {
-    await botResponde(selos ? `Você já tem ${selos} selos. Este pedido vale mais um!` : "Este é o seu primeiro selo. Bem-vindo ao cartão fidelidade!");
+    await botResponde(selos
+      ? `Você já tem ${selos} selos. Este pedido vale mais um, que entra no cartão quando o pagamento for confirmado.`
+      : "Bem-vindo ao cartão fidelidade! Seu primeiro selo entra no cartão quando o pagamento for confirmado.");
     return;
   }
 
@@ -273,8 +287,7 @@ function criarResumo() {
 
   const detalhes = document.createElement("p");
   const entrega = pedido.entrega.tipo === "entrega" ? `Entrega em ${pedido.entrega.endereco}, ${pedido.entrega.bairro}.` : "Retirada no balcão.";
-  const troco = pedido.troco ? `, troco para ${formatarPreco(pedido.troco)}` : "";
-  detalhes.textContent = `${entrega} Pagamento: ${pedido.pagamento}${troco}.`;
+  detalhes.textContent = `${entrega} Pagamento: ${descreverPagamento(pedido)}.`;
 
   bloco.append(titulo, lista, totais, detalhes);
   return bloco;
@@ -326,35 +339,104 @@ async function registrarPedido() {
   }
 }
 
+// ---------- Pagamento no ato ----------
+
+// Chave Pix com botão de copiar. O cliente paga e manda o comprovante na conversa do WhatsApp.
+function criarInstrucoesPix() {
+  const bloco = document.createDocumentFragment();
+  const texto = document.createElement("p");
+  texto.textContent = "Para pagar, use a chave Pix abaixo e envie o comprovante na conversa do WhatsApp:";
+
+  const chave = document.createElement("div");
+  chave.className = "chave-pix";
+  const valor = document.createElement("code");
+  valor.textContent = loja.pagamento.chavePix;
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.className = "chave-pix__copiar";
+  botao.textContent = "Copiar";
+  botao.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(loja.pagamento.chavePix);
+      botao.textContent = "Copiada!";
+    } catch {
+      botao.textContent = "Selecione e copie";
+    }
+    setTimeout(() => (botao.textContent = "Copiar"), 2500);
+  });
+  chave.append(valor, botao);
+
+  const recebedor = document.createElement("small");
+  recebedor.textContent = `Recebedor: ${loja.pagamento.recebedorPix}`;
+
+  bloco.append(texto, chave, recebedor);
+  return bloco;
+}
+
+async function orientarPagamento() {
+  if (pedido.momentoPagamento !== "pedido") return;
+
+  if (pedido.pagamento === "Pix" && loja.pagamento.chavePix) {
+    await botResponde(criarInstrucoesPix());
+  } else {
+    await botResponde(`A loja vai te mandar o ${pedido.pagamento.toLowerCase()} pelo WhatsApp.`);
+  }
+  await botResponde("Assim que a loja confirmar o pagamento, seu pedido vai para a cozinha. Eu te aviso por aqui!");
+}
+
+// ---------- Acompanhamento ----------
+
 const MENSAGENS_DE_STATUS = {
-  recebido: () => "A loja recebeu seu pedido. Assim que começar o preparo, eu te aviso por aqui.",
+  recebido: (dados) => dados.momentoPagamento === "pedido"
+    ? "Pagamento confirmado! Seu pedido já está na fila da cozinha."
+    : "A loja recebeu seu pedido. Assim que começar o preparo, eu te aviso por aqui.",
   preparando: () => "Seu pedido está sendo preparado! 👨‍🍳",
-  pronto: (entrega) => (entrega.tipo === "entrega" ? "Seu pedido está pronto e já vai sair para entrega! 🛵" : "Seu pedido está pronto para retirada no balcão!"),
+  pronto: (dados) => (dados.entrega.tipo === "entrega" ? "Seu pedido está pronto e já vai sair para entrega! 🛵" : "Seu pedido está pronto para retirada no balcão!"),
   finalizado: () => "Pedido concluído. Bom apetite! 🍔",
+  cancelado: () => "O pagamento não foi confirmado e a loja cancelou o pedido. Se já pagou ou tiver alguma dúvida, fale com a loja pelo WhatsApp.",
 };
 
-// Escuta o pedido no banco e avisa o cliente a cada mudança de status
+// Escuta o pedido no banco e avisa o cliente a cada mudança.
+// O selo só aparece quando o pedido foi concluído E o admin confirmou o pagamento,
+// seja qual for a ordem em que essas duas coisas acontecerem.
 function acompanhar(registro) {
   let ultimoStatus = null;
+  let avisouSeloPendente = false;
+
   const parar = registro.banco.acompanharPedido(loja.loja.id, registro.id, (dados) => {
-    if (dados.status === ultimoStatus) return;
-    ultimoStatus = dados.status;
-    adicionarMensagem("bot", MENSAGENS_DE_STATUS[dados.status](dados.entrega));
-    if (dados.status === "finalizado") {
+    if (dados.status !== ultimoStatus) {
+      ultimoStatus = dados.status;
+      const mensagem = MENSAGENS_DE_STATUS[dados.status];
+      if (mensagem) adicionarMensagem("bot", mensagem(dados));
+    }
+
+    if (dados.status === "cancelado") {
       parar();
-      if (dados.clienteId) mostrarSeloGanho(registro.banco, dados.clienteId);
+      return;
+    }
+    if (dados.status !== "finalizado") return;
+
+    const pago = dados.situacaoPagamento === "confirmado";
+    if (!dados.clienteId) {
+      parar();
+    } else if (pago) {
+      parar();
+      mostrarSeloGanho(registro.banco, dados.clienteId);
+    } else if (dados.situacaoPagamento === "pendente" && !avisouSeloPendente) {
+      avisouSeloPendente = true;
+      adicionarMensagem("bot", "Seu selo entra no cartão fidelidade assim que a loja confirmar o pagamento.");
     }
   });
 }
 
-// Depois que a cozinha finaliza, o selo já está no cartão: mostra o cartão atualizado
+// O selo foi registrado junto com a confirmação do pagamento: mostra o cartão atualizado
 async function mostrarSeloGanho(banco, clienteId) {
   try {
     const selos = await banco.buscarSelos(loja, clienteId);
     definirEtapa(3);
     const bloco = document.createDocumentFragment();
     const texto = document.createElement("p");
-    texto.textContent = "Você ganhou mais um selo!";
+    texto.textContent = "Pagamento confirmado. Você ganhou mais um selo!";
     bloco.append(texto, criarCartaoFidelidade(selos, loja));
     adicionarMensagem("bot", bloco);
   } catch (erro) {
@@ -420,6 +502,8 @@ export async function fazerPedido(configuracaoDaLoja) {
     const registro = await registrarPedido();
     const link = criarLink(loja, montarMensagem(pedido, loja, registro?.numero));
     await botResponde(criarBotaoWhatsApp(link, registro?.numero));
+
+    await orientarPagamento();
 
     if (registro) {
       enviado = true;

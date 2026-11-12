@@ -1,0 +1,320 @@
+/* admin.css
+   Painel do administrador. Usa a base do cozinha.css (cores, topo, login, etiquetas)
+   e acrescenta a bobina do caixa, as filas de pagamento e o diálogo de confirmação. */
+
+.admin {
+  display: grid;
+  gap: 20px;
+  padding: 16px;
+}
+
+@media (min-width: 960px) {
+  .admin {
+    grid-template-columns: 300px 1fr;
+    align-items: start;
+    padding: 24px;
+    gap: 28px;
+  }
+}
+
+/* ---------- Bobina do caixa ---------- */
+
+.caixa {
+  --serrilha: 10px;
+  padding: 22px 22px calc(22px + var(--serrilha));
+  background: var(--branco);
+  border: 1px solid var(--linha);
+  border-bottom: none;
+  /* Borda de baixo serrilhada, como papel de bobina rasgado */
+  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(var(--serrilha) * 2) var(--serrilha) repeat-x,
+    linear-gradient(#000 0 0) top / 100% calc(100% - var(--serrilha) + 1px) no-repeat;
+  mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(var(--serrilha) * 2) var(--serrilha) repeat-x,
+    linear-gradient(#000 0 0) top / 100% calc(100% - var(--serrilha) + 1px) no-repeat;
+}
+
+@media (min-width: 960px) {
+  .caixa {
+    position: sticky;
+    top: 84px;
+  }
+}
+
+.caixa p {
+  margin: 0;
+}
+
+.caixa__titulo {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--marrom);
+  text-align: center;
+}
+
+.caixa__data {
+  text-align: center;
+  color: var(--suave);
+  padding-bottom: 14px;
+  border-bottom: 2px dashed var(--linha);
+}
+
+.caixa__rotulo {
+  margin-top: 16px !important;
+  text-align: center;
+  font-weight: 700;
+  color: var(--verde);
+}
+
+.caixa__valor {
+  font-family: "Baloo 2", system-ui, sans-serif;
+  font-size: clamp(2.2rem, 6vw, 2.8rem);
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
+  color: var(--marrom);
+  font-variant-numeric: tabular-nums;
+  padding-bottom: 14px;
+  border-bottom: 2px dashed var(--linha);
+}
+
+.caixa__linhas {
+  margin: 12px 0;
+  display: grid;
+  gap: 6px;
+}
+
+.caixa__linhas div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+/* Pontilhado entre o nome e o valor, como nas notas de caixa */
+.caixa__linhas div::after {
+  content: "";
+  order: 1;
+  flex: 1;
+  border-bottom: 2px dotted var(--linha);
+}
+
+.caixa__linhas dt {
+  order: 0;
+}
+
+.caixa__linhas dd {
+  order: 2;
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.caixa__nota {
+  font-size: 0.8rem;
+  color: var(--suave);
+}
+
+/* ---------- Filas ---------- */
+
+.filas {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+.fila {
+  --cor-coluna: var(--marrom);
+  border-left: 6px solid var(--cor-coluna);
+  padding-left: 16px;
+}
+
+.fila--aguardando { --cor-coluna: var(--laranja); }
+.fila--receber { --cor-coluna: var(--amarelo); }
+.fila--nao-pagos { --cor-coluna: var(--vermelho); }
+.fila--pagos { --cor-coluna: var(--verde); }
+
+.fila h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1.3rem;
+  color: var(--marrom);
+}
+
+.fila--aguardando .contador,
+.fila--receber .contador {
+  color: var(--marrom-escuro);
+}
+
+.fila__ajuda {
+  margin: 2px 0 10px;
+  max-width: 70ch;
+  color: var(--suave);
+  font-size: 0.92rem;
+}
+
+.fila__lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.fila__vazia {
+  padding: 12px 0;
+  color: var(--suave);
+}
+
+.fila--pagos summary {
+  cursor: pointer;
+  list-style: none;
+  padding-bottom: 10px;
+}
+
+.fila--pagos summary::-webkit-details-marker {
+  display: none;
+}
+
+.fila--pagos summary h2::after {
+  content: "Mostrar";
+  margin-left: 4px;
+  font-family: "Atkinson Hyperlegible", system-ui, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--suave);
+  text-decoration: underline;
+}
+
+.fila--pagos[open] summary h2::after {
+  content: "Esconder";
+}
+
+/* ---------- Linha de pedido ---------- */
+
+.pedido {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--branco);
+  border: 1px solid var(--linha);
+}
+
+/* Colunas iguais em todas as linhas, para os valores ficarem alinhados de uma linha para outra */
+@media (min-width: 700px) {
+  .pedido {
+    grid-template-columns: minmax(130px, 1fr) minmax(160px, 1.2fr) 150px;
+    align-items: center;
+  }
+
+  .pedido__acoes {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+}
+
+@media (min-width: 1200px) {
+  .pedido {
+    grid-template-columns: minmax(130px, 1fr) minmax(160px, 1.2fr) 150px 320px;
+  }
+
+  .pedido__acoes {
+    grid-column: auto;
+  }
+}
+
+.pedido__identificacao,
+.pedido__pagamento,
+.pedido__situacao {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pedido__situacao {
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.pedido__numero {
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+}
+
+.pedido__hora,
+.pedido__pagamento span {
+  color: var(--suave);
+  font-size: 0.88rem;
+}
+
+.pedido__total {
+  font-size: 1.1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pedido__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.preparo {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.preparo--aguardando_pagamento { color: color-mix(in srgb, var(--laranja) 50%, var(--marrom-escuro)); }
+.preparo--finalizado { color: var(--verde); }
+
+/* ---------- Botão secundário e diálogo ---------- */
+
+.botao-secundario {
+  font: inherit;
+  font-weight: 700;
+  padding: 9px 15px;
+  border-radius: 12px;
+  border: 1px solid var(--linha);
+  background: var(--branco);
+  color: var(--marrom);
+  cursor: pointer;
+}
+
+.botao-secundario:hover {
+  border-color: var(--marrom);
+}
+
+.botao-secundario:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.dialogo {
+  width: min(92vw, 440px);
+  padding: 24px;
+  border: none;
+  border-radius: 20px;
+  background: var(--branco);
+  color: var(--marrom-escuro);
+}
+
+.dialogo::backdrop {
+  background: color-mix(in srgb, var(--marrom-escuro) 55%, transparent);
+}
+
+.dialogo h2 {
+  margin: 0 0 8px;
+  font-size: 1.35rem;
+  color: var(--marrom);
+}
+
+.dialogo p {
+  margin: 0 0 20px;
+}
+
+.dialogo__botoes {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}

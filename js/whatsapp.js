@@ -1,7 +1,7 @@
 // whatsapp.js
 // Monta o texto do pedido e o link wa.me, sem precisar da API paga do WhatsApp.
 
-import { formatarPreco, agruparItens, calcularSubtotal, calcularTaxa, calcularTotal } from "./pedido.js";
+import { formatarPreco, agruparItens, calcularSubtotal, calcularTaxa, calcularTotal, descreverPagamento } from "./pedido.js";
 
 export function montarMensagem(pedido, loja, numero = null) {
   const titulo = numero ? `*Novo pedido #${numero}: ${loja.loja.nome}*` : `*Novo pedido: ${loja.loja.nome}*`;
@@ -26,8 +26,11 @@ export function montarMensagem(pedido, loja, numero = null) {
     linhas.push("Retirada no balcão");
   }
 
-  const troco = pedido.troco ? ` (troco para ${formatarPreco(pedido.troco)})` : "";
-  linhas.push(`Pagamento: ${pedido.pagamento}${troco}`, "", "Pedido feito pelo Freguês");
+  linhas.push(`Pagamento: ${descreverPagamento(pedido)}`);
+  if (pedido.momentoPagamento === "pedido") {
+    linhas.push("_Aguardando pagamento: o pedido vai para a cozinha depois da confirmação._");
+  }
+  linhas.push("", "Pedido feito pelo Freguês");
 
   return linhas.join("\n");
 }

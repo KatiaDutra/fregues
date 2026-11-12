@@ -66,6 +66,25 @@ h2,
   opacity: 0.85;
 }
 
+.navegacao-paineis {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.navegacao-paineis a {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--laranja);
+  color: var(--marrom-escuro);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.navegacao-paineis:not([hidden]) + .botao-sair {
+  margin-left: 0;
+}
+
 .botao-sair {
   margin-left: auto;
   font: inherit;
@@ -267,6 +286,16 @@ h2,
 .etiqueta--premio {
   background: var(--verde);
   color: var(--branco);
+}
+
+.etiqueta--pago {
+  background: color-mix(in srgb, var(--verde) 22%, var(--branco));
+  color: color-mix(in srgb, var(--verde) 60%, var(--marrom-escuro));
+}
+
+.etiqueta--cobrar {
+  background: color-mix(in srgb, var(--vermelho) 16%, var(--branco));
+  color: color-mix(in srgb, var(--vermelho) 55%, var(--marrom-escuro));
 }
 
 .cartao__itens {

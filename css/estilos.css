@@ -372,6 +372,38 @@ body {
   background: color-mix(in srgb, var(--cor-principal) 85%, var(--cor-texto));
 }
 
+/* ---------- Chave Pix ---------- */
+
+.chave-pix {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 4px;
+  padding: 6px 6px 6px 12px;
+  border-radius: 12px;
+  border: 2px dashed var(--cor-principal);
+}
+
+.chave-pix code {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: inherit;
+  font-weight: 700;
+}
+
+.chave-pix__copiar {
+  font: inherit;
+  font-weight: 700;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--cor-principal);
+  color: var(--cor-texto-sobre-principal);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 /* ---------- Cartão fidelidade ---------- */
 
 .cartao-fidelidade {

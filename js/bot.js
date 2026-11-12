@@ -93,10 +93,16 @@ function respostaEntrega() {
   return bloco;
 }
 
+function listarFormas(formas) {
+  return formas.length > 1 ? `${formas.slice(0, -1).join(", ")} ou ${formas.at(-1)}` : formas[0];
+}
+
 function respostaPagamento() {
-  const formas = loja.pagamento;
-  const texto = formas.length > 1 ? `${formas.slice(0, -1).join(", ")} ou ${formas.at(-1)}` : formas[0];
-  return `Você pode pagar com ${texto}.`;
+  const { noPedido, noRecebimento } = loja.pagamento;
+  const frases = [];
+  if (noPedido.length) frases.push(`Para pagar já no pedido: ${listarFormas(noPedido)}.`);
+  if (noRecebimento.length) frases.push(`Para pagar na entrega ou na retirada: ${listarFormas(noRecebimento)}.`);
+  return frases.join(" ");
 }
 
 const RESPOSTAS = {

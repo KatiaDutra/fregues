@@ -1,22 +1,20 @@
 // cozinha.js
-// Painel da cozinha: login, pedidos em tempo real e mudança de status.
+// Painel da cozinha: pedidos liberados em tempo real e avanço do preparo.
+// A cozinha não mexe em pagamento nem em selos: isso é do admin.
 // Esta é uma tela de gestão, então usa a marca do Freguês, não a da loja.
 
-import { app } from "./firebase.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { carregarConfiguracao } from "./config.js";
-import { acompanharPedidosRecentes, mudarStatus, finalizarPedido, numeroDoPedido } from "./banco.js";
-import { formatarPreco } from "./pedido.js";
+import { acompanharPedidosRecentes, mudarStatus, numeroDoPedido } from "./banco.js";
+import { formatarPreco, descreverPagamento } from "./pedido.js";
+import { protegerPainel, tocarAviso, tempoDecorrido, criarElemento } from "./acesso.js";
 
-const auth = getAuth(app);
+const COLUNAS = ["recebido", "preparando", "pronto"];
+
 let loja = null;
 let pedidos = [];
 let pararDeOuvir = null;
-let primeiraCarga = true;
+let idsConhecidos = null; // pedidos já vistos pela cozinha, para tocar o aviso só nos novos
 
-const telaLogin = document.querySelector("#tela-login");
-const telaQuadro = document.querySelector("#tela-quadro");
-const botaoSair = document.querySelector("#botao-sair");
 const aviso = document.querySelector("#aviso");
 
 // Próximo passo de cada status, com o texto do botão
@@ -26,65 +24,13 @@ const PROXIMO_PASSO = {
   pronto: { status: "finalizado", rotulo: "Finalizar" },
 };
 
-// ---------- Login ----------
-
-const MENSAGENS_DE_ERRO = {
-  "auth/invalid-credential": "E-mail ou senha incorretos.",
-  "auth/invalid-email": "Esse e-mail não parece válido.",
-  "auth/too-many-requests": "Muitas tentativas. Espere alguns minutos e tente de novo.",
-  "auth/network-request-failed": "Sem conexão com a internet.",
-};
-
-document.querySelector("#formulario-login").addEventListener("submit", async (evento) => {
-  evento.preventDefault();
-  const erro = document.querySelector("#erro-login");
-  erro.textContent = "";
-
-  try {
-    await signInWithEmailAndPassword(auth, document.querySelector("#email").value, document.querySelector("#senha").value);
-  } catch (falha) {
-    erro.textContent = MENSAGENS_DE_ERRO[falha.code] ?? "Não foi possível entrar. Tente de novo.";
-  }
-});
-
-botaoSair.addEventListener("click", () => signOut(auth));
-
-// ---------- Aviso sonoro ----------
-
-// Um "plim" curto feito pelo navegador, sem precisar de arquivo de som
-function tocarAviso() {
-  try {
-    const audio = new AudioContext();
-    [880, 1175].forEach((frequencia, i) => {
-      const nota = audio.createOscillator();
-      const volume = audio.createGain();
-      nota.frequency.value = frequencia;
-      volume.gain.setValueAtTime(0.2, audio.currentTime + i * 0.18);
-      volume.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + i * 0.18 + 0.4);
-      nota.connect(volume).connect(audio.destination);
-      nota.start(audio.currentTime + i * 0.18);
-      nota.stop(audio.currentTime + i * 0.18 + 0.4);
-    });
-  } catch {
-    // Se o navegador bloquear o som, o painel continua funcionando
-  }
-}
-
 // ---------- Quadro ----------
 
-function tempoDecorrido(data) {
-  if (!data) return "agora";
-  const minutos = Math.floor((Date.now() - data.getTime()) / 60000);
-  if (minutos < 1) return "agora";
-  if (minutos < 60) return `há ${minutos} min`;
-  return `há ${Math.floor(minutos / 60)} h ${minutos % 60} min`;
-}
-
-function criarElemento(tag, classe, texto) {
-  const elemento = document.createElement(tag);
-  if (classe) elemento.className = classe;
-  if (texto !== undefined) elemento.textContent = texto;
-  return elemento;
+// Na cozinha, o que importa sobre o pagamento é: já está pago ou precisa cobrar?
+function etiquetaDePagamento(pedido) {
+  if (pedido.situacaoPagamento === "confirmado") return criarElemento("span", "etiqueta etiqueta--pago", "Pago");
+  const onde = pedido.entrega.tipo === "entrega" ? "na entrega" : "na retirada";
+  return criarElemento("span", "etiqueta etiqueta--cobrar", `Cobrar ${onde}`);
 }
 
 function criarCartao(pedido) {
@@ -95,18 +41,17 @@ function criarCartao(pedido) {
   const topo = criarElemento("header", "cartao__topo");
   topo.append(criarElemento("strong", "cartao__numero", `#${numeroDoPedido(pedido.id)}`));
   const hora = criadoEm ? criadoEm.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "";
-  topo.append(criarElemento("span", "cartao__hora", `${hora} · ${tempoDecorrido(criadoEm)}`));
+  topo.append(criarElemento("span", "cartao__hora", `${hora}, ${tempoDecorrido(criadoEm)}`));
   cartao.append(topo);
 
   cartao.append(criarElemento("p", "cartao__cliente", pedido.cliente));
 
-  // Etiquetas de fidelidade
-  if (pedido.clienteId || pedido.usaPremio) {
-    const etiquetas = criarElemento("div", "cartao__etiquetas");
-    if (pedido.clienteId) etiquetas.append(criarElemento("span", "etiqueta", "Cartão fidelidade"));
-    if (pedido.usaPremio) etiquetas.append(criarElemento("span", "etiqueta etiqueta--premio", "Usando prêmio"));
-    cartao.append(etiquetas);
-  }
+  // Etiquetas: pagamento e fidelidade
+  const etiquetas = criarElemento("div", "cartao__etiquetas");
+  etiquetas.append(etiquetaDePagamento(pedido));
+  if (pedido.clienteId) etiquetas.append(criarElemento("span", "etiqueta", "Cartão fidelidade"));
+  if (pedido.usaPremio) etiquetas.append(criarElemento("span", "etiqueta etiqueta--premio", "Usando prêmio"));
+  cartao.append(etiquetas);
 
   // Itens
   const lista = criarElemento("ul", "cartao__itens");
@@ -123,8 +68,7 @@ function criarCartao(pedido) {
     ? `Entrega: ${pedido.entrega.endereco}, ${pedido.entrega.bairro}`
     : "Retirada no balcão";
   cartao.append(criarElemento("p", "cartao__info", entrega));
-  const troco = pedido.troco ? `, troco para ${formatarPreco(pedido.troco)}` : "";
-  cartao.append(criarElemento("p", "cartao__info", `${pedido.pagamento}${troco} · Total ${formatarPreco(pedido.total)}`));
+  cartao.append(criarElemento("p", "cartao__info", `${descreverPagamento(pedido)}. Total ${formatarPreco(pedido.total)}`));
 
   // Botão para avançar o status
   const passo = PROXIMO_PASSO[pedido.status];
@@ -133,13 +77,7 @@ function criarCartao(pedido) {
   botao.addEventListener("click", async () => {
     botao.disabled = true;
     try {
-      // Ao finalizar, o selo do cliente é registrado junto
-      if (passo.status === "finalizado") {
-        const alerta = await finalizarPedido(loja, pedido);
-        if (alerta) mostrarAviso(alerta);
-      } else {
-        await mudarStatus(loja.loja.id, pedido.id, passo.status);
-      }
+      await mudarStatus(loja.loja.id, pedido.id, passo.status);
     } catch (erro) {
       console.error(erro);
       botao.disabled = false;
@@ -152,7 +90,7 @@ function criarCartao(pedido) {
 }
 
 function desenharQuadro() {
-  ["recebido", "preparando", "pronto"].forEach((status) => {
+  COLUNAS.forEach((status) => {
     const doStatus = pedidos.filter((p) => p.status === status);
     document.querySelector(`#contador-${status}`).textContent = doStatus.length;
 
@@ -168,24 +106,40 @@ function mostrarAviso(texto) {
   setTimeout(() => (aviso.hidden = true), 5000);
 }
 
+// Pedidos que acabaram de chegar à cozinha: novos pagos no recebimento,
+// ou pagos no ato que o admin acabou de liberar
+function avisarNovos(lista) {
+  const visiveis = lista.filter((p) => COLUNAS.includes(p.status)).map((p) => p.id);
+  if (idsConhecidos) {
+    const novos = visiveis.filter((id) => !idsConhecidos.has(id)).length;
+    if (novos > 0) {
+      tocarAviso();
+      mostrarAviso(novos === 1 ? "Novo pedido!" : `${novos} pedidos novos!`);
+    }
+  }
+  idsConhecidos = new Set([...(idsConhecidos ?? []), ...visiveis]);
+}
+
 function comecarAOuvir() {
-  primeiraCarga = true;
+  if (pararDeOuvir) return;
+  idsConhecidos = null;
   pararDeOuvir = acompanharPedidosRecentes(
     loja.loja.id,
-    (lista, novos) => {
+    (lista) => {
       pedidos = lista;
       desenharQuadro();
-      if (!primeiraCarga && novos > 0) {
-        tocarAviso();
-        mostrarAviso(novos === 1 ? "Novo pedido!" : `${novos} pedidos novos!`);
-      }
-      primeiraCarga = false;
+      avisarNovos(lista);
     },
     (erro) => {
       console.error(erro);
-      mostrarAviso("Sem permissão para ver os pedidos. Confira as regras do Firestore e o UID da cozinha.");
+      mostrarAviso("Sem permissão para ver os pedidos. Confira as regras do Firestore e os papéis da equipe.");
     }
   );
+}
+
+function pararDeAcompanhar() {
+  if (pararDeOuvir) pararDeOuvir();
+  pararDeOuvir = null;
 }
 
 // O tempo de espera dos cartões é atualizado a cada 30 segundos
@@ -197,21 +151,8 @@ setInterval(() => {
 
 async function iniciar() {
   loja = await carregarConfiguracao();
-  document.querySelector("#nome-da-loja").textContent = `Cozinha · ${loja.loja.nome}`;
-
-  onAuthStateChanged(auth, (usuario) => {
-    const logado = Boolean(usuario);
-    telaLogin.hidden = logado;
-    telaQuadro.hidden = !logado;
-    botaoSair.hidden = !logado;
-
-    if (logado) {
-      comecarAOuvir();
-    } else if (pararDeOuvir) {
-      pararDeOuvir();
-      pararDeOuvir = null;
-    }
-  });
+  document.querySelector("#nome-da-loja").textContent = `Cozinha de ${loja.loja.nome}`;
+  protegerPainel("cozinha", comecarAOuvir, pararDeAcompanhar);
 }
 
 iniciar();

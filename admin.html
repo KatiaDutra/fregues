@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Pagamentos | Freguês</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#592012">
+  <link rel="icon" href="assets/img/favicon.ico" sizes="48x48">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Baloo+2:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/cozinha.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <header class="topo">
+    <img src="assets/img/icone-redondo.png" alt="" width="40" height="40">
+    <div class="topo__marca">
+      <strong>Freguês</strong>
+      <span id="nome-da-loja">Pagamentos</span>
+    </div>
+    <nav id="navegacao-paineis" class="navegacao-paineis" aria-label="Outros painéis" hidden></nav>
+    <button id="botao-sair" class="botao-sair" type="button" hidden>Sair</button>
+  </header>
+
+  <!-- Login: só quem tem o papel "admin" controla os pagamentos -->
+  <main id="tela-login" class="login" hidden>
+    <form id="formulario-login" class="login__cartao">
+      <h1>Pagamentos</h1>
+      <p>Entre com o login do administrador para conferir e confirmar os pagamentos.</p>
+
+      <label for="email">E-mail</label>
+      <input id="email" type="email" autocomplete="username" required>
+
+      <label for="senha">Senha</label>
+      <input id="senha" type="password" autocomplete="current-password" required>
+
+      <p id="erro-login" class="login__erro" role="alert"></p>
+      <button type="submit" class="botao-principal">Entrar</button>
+    </form>
+  </main>
+
+  <!-- Logado, mas sem o papel "admin" -->
+  <main id="tela-sem-acesso" class="login" hidden>
+    <div class="login__cartao">
+      <h1>Sem acesso aos pagamentos</h1>
+      <p>Este login não tem permissão de administrador. Peça ao responsável pela loja para liberar o acesso.</p>
+      <button id="sair-sem-acesso" type="button" class="botao-principal">Entrar com outro login</button>
+    </div>
+  </main>
+
+  <main id="tela-painel" class="admin" hidden>
+    <!-- Caixa do dia, em forma de bobina de caixa -->
+    <aside class="caixa" aria-labelledby="titulo-caixa">
+      <h1 id="titulo-caixa" class="caixa__titulo">Caixa de hoje</h1>
+      <p class="caixa__data" id="data-de-hoje"></p>
+      <p class="caixa__rotulo">Recebido</p>
+      <p class="caixa__valor" id="total-recebido" aria-live="polite">R$ 0,00</p>
+      <dl class="caixa__linhas">
+        <div><dt>A receber</dt><dd id="total-a-receber">R$ 0,00</dd></div>
+        <div><dt>Aguardando pagamento</dt><dd id="total-aguardando">R$ 0,00</dd></div>
+        <div><dt>Não pagos</dt><dd id="total-nao-pagos">R$ 0,00</dd></div>
+        <div><dt>Pedidos do dia</dt><dd id="quantidade-pedidos">0</dd></div>
+      </dl>
+      <p class="caixa__nota">Considera os pedidos feitos hoje. As listas ao lado mostram os últimos 7 dias.</p>
+    </aside>
+
+    <div class="filas">
+      <section class="fila fila--aguardando" aria-labelledby="titulo-aguardando">
+        <h2 id="titulo-aguardando">Aguardando pagamento <span class="contador" id="contador-aguardando">0</span></h2>
+        <p class="fila__ajuda">Pagos no ato do pedido. Confira o extrato ou a maquininha: o pedido só vai para a cozinha depois do seu ok.</p>
+        <ul class="fila__lista" id="lista-aguardando"></ul>
+      </section>
+
+      <section class="fila fila--receber" aria-labelledby="titulo-receber">
+        <h2 id="titulo-receber">A receber <span class="contador" id="contador-receber">0</span></h2>
+        <p class="fila__ajuda">Pagamento na entrega ou na retirada. Confirme quando o dinheiro, o Pix ou a maquininha baterem.</p>
+        <ul class="fila__lista" id="lista-receber"></ul>
+      </section>
+
+      <section class="fila fila--nao-pagos" aria-labelledby="titulo-nao-pagos">
+        <h2 id="titulo-nao-pagos">Não pagos <span class="contador" id="contador-nao-pagos">0</span></h2>
+        <p class="fila__ajuda">Pedidos sem pagamento. Se o cliente pagar depois, confirme por aqui e o selo é registrado.</p>
+        <ul class="fila__lista" id="lista-nao-pagos"></ul>
+      </section>
+
+      <details class="fila fila--pagos">
+        <summary><h2>Pagos <span class="contador" id="contador-pagos">0</span></h2></summary>
+        <ul class="fila__lista" id="lista-pagos"></ul>
+      </details>
+    </div>
+  </main>
+
+  <!-- Confirmação antes de qualquer ação de pagamento -->
+  <dialog id="dialogo" class="dialogo" aria-labelledby="dialogo-titulo">
+    <form method="dialog">
+      <h2 id="dialogo-titulo"></h2>
+      <p id="dialogo-texto"></p>
+      <div class="dialogo__botoes">
+        <button value="cancelar" class="botao-secundario">Voltar</button>
+        <button value="confirmar" id="dialogo-confirmar" class="botao-principal"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <p id="aviso" class="aviso" role="status" hidden></p>
+
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

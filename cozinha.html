@@ -19,10 +19,11 @@
       <strong>Freguês</strong>
       <span id="nome-da-loja">Cozinha</span>
     </div>
+    <nav id="navegacao-paineis" class="navegacao-paineis" aria-label="Outros painéis" hidden></nav>
     <button id="botao-sair" class="botao-sair" type="button" hidden>Sair</button>
   </header>
 
-  <!-- Login: só a cozinha da loja acessa os pedidos -->
+  <!-- Login: só quem tem o papel "cozinha" acessa os pedidos -->
   <main id="tela-login" class="login" hidden>
     <form id="formulario-login" class="login__cartao">
       <h1>Painel da cozinha</h1>
@@ -39,8 +40,17 @@
     </form>
   </main>
 
-  <!-- Quadro de pedidos -->
-  <main id="tela-quadro" class="quadro" hidden>
+  <!-- Logado, mas sem o papel "cozinha" -->
+  <main id="tela-sem-acesso" class="login" hidden>
+    <div class="login__cartao">
+      <h1>Sem acesso à cozinha</h1>
+      <p>Este login não tem permissão para ver o painel da cozinha. Peça ao administrador da loja para liberar o acesso.</p>
+      <button id="sair-sem-acesso" type="button" class="botao-principal">Entrar com outro login</button>
+    </div>
+  </main>
+
+  <!-- Quadro de pedidos: só aparecem os pedidos liberados para a cozinha -->
+  <main id="tela-painel" class="quadro" hidden>
     <section class="coluna coluna--recebido" aria-labelledby="titulo-recebido">
       <h2 id="titulo-recebido">Recebidos <span class="contador" id="contador-recebido">0</span></h2>
       <div class="coluna__lista" id="lista-recebido"></div>

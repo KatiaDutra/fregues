@@ -11,7 +11,8 @@ export function criarPedido() {
   return {
     itens: [],
     entrega: null, // { tipo: "entrega", bairro, taxa, endereco } ou { tipo: "retirada" }
-    pagamento: null,
+    pagamento: null, // forma de pagamento, como "Pix"
+    momentoPagamento: null, // "pedido" ou "recebimento"
     troco: null,
     cliente: null,
     clienteId: null, // id protegido do cartão fidelidade
@@ -97,4 +98,24 @@ export function resumoCurto(pedido, loja) {
   const quantidade = pedido.itens.length;
   const palavra = quantidade === 1 ? "item" : "itens";
   return `Seu pedido: ${quantidade} ${palavra}, ${formatarPreco(calcularSubtotal(pedido, loja))}`;
+}
+
+// ---------- Pagamento ----------
+// "pedido": o cliente paga antes e o pedido só vai para a cozinha depois do ok do admin.
+// "recebimento": o cliente paga na entrega ou na retirada, e o admin confirma depois.
+
+export function opcoesDePagamento(loja, momento) {
+  return momento === "pedido" ? loja.pagamento.noPedido : loja.pagamento.noRecebimento;
+}
+
+export function descreverMomento(momento, entrega) {
+  if (momento === "pedido") return "pago no pedido";
+  return entrega?.tipo === "entrega" ? "na entrega" : "na retirada";
+}
+
+// "Pix, pago no pedido" ou "Dinheiro na retirada, troco para R$ 50,00"
+export function descreverPagamento(pedido) {
+  const separador = pedido.momentoPagamento === "pedido" ? ", " : " ";
+  const troco = pedido.troco ? `, troco para ${formatarPreco(pedido.troco)}` : "";
+  return `${pedido.pagamento}${separador}${descreverMomento(pedido.momentoPagamento, pedido.entrega)}${troco}`;
 }
