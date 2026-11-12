@@ -171,6 +171,9 @@
     "premio": "Um Clássico do Zé grátis",
     "validadeDosSelosEmDias": 180
   },
+  "posVenda": {
+    "minutosAposEntrega": 10
+  },
   "duvidas": [
     {
       "palavras": [

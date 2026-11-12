@@ -7,7 +7,7 @@ import { atualizarResumo, definirEtapa, adicionarMensagem } from "./ui.js";
 import { statusDaLoja } from "./horario.js";
 import {
   criarPedido, formatarPreco, precoDoCombo, precoDoItem, agruparItens, resumoCurto,
-  calcularSubtotal, calcularTaxa, calcularTotal, faltaParaMinimo, opcoesDePagamento, descreverPagamento,
+  calcularSubtotal, calcularTaxa, calcularTotal, faltaParaMinimo, opcoesDePagamento, descreverPagamento, podeAvaliar,
 } from "./pedido.js";
 import { montarMensagem, criarLink } from "./whatsapp.js";
 import { normalizarTelefone, gerarIdDoCliente, temPremio, criarCartaoFidelidade } from "./fidelidade.js";
@@ -392,7 +392,7 @@ const MENSAGENS_DE_STATUS = {
     : "A loja recebeu seu pedido. Assim que começar o preparo, eu te aviso por aqui.",
   preparando: () => "Seu pedido está sendo preparado! 👨‍🍳",
   pronto: (dados) => (dados.entrega.tipo === "entrega" ? "Seu pedido está pronto e já vai sair para entrega! 🛵" : "Seu pedido está pronto para retirada no balcão!"),
-  finalizado: () => "Pedido concluído. Bom apetite! 🍔",
+  finalizado: (dados) => (dados.entrega.tipo === "entrega" ? "Pedido entregue. Bom apetite! 🍔" : "Pedido retirado. Bom apetite! 🍔"),
   cancelado: () => "O pagamento não foi confirmado e a loja cancelou o pedido. Se já pagou ou tiver alguma dúvida, fale com a loja pelo WhatsApp.",
 };
 
@@ -416,17 +416,26 @@ function acompanhar(registro) {
     }
     if (dados.status !== "finalizado") return;
 
-    const pago = dados.situacaoPagamento === "confirmado";
-    if (!dados.clienteId) {
+    // Entregue e pago: mostra o selo (se tiver cartão) e pede a avaliação.
+    // Sem pagamento confirmado, o chat continua ouvindo, porque o admin pode confirmar depois.
+    if (podeAvaliar(dados)) {
       parar();
-    } else if (pago) {
-      parar();
-      mostrarSeloGanho(registro.banco, dados.clienteId);
-    } else if (dados.situacaoPagamento === "pendente" && !avisouSeloPendente) {
+      if (dados.clienteId) mostrarSeloGanho(registro.banco, dados.clienteId);
+      agendarAvaliacao({ id: registro.id, ...dados });
+    } else if (dados.clienteId && dados.situacaoPagamento === "pendente" && !avisouSeloPendente) {
       avisouSeloPendente = true;
       adicionarMensagem("bot", "Seu selo entra no cartão fidelidade assim que a loja confirmar o pagamento.");
     }
   });
+}
+
+// O pedido de avaliação espera alguns minutos depois da entrega, para o cliente comer com calma.
+// Se o pagamento foi confirmado depois desse tempo, a avaliação vem logo após a confirmação.
+function agendarAvaliacao(pedidoEntregue) {
+  const espera = (loja.posVenda?.minutosAposEntrega ?? 10) * 60 * 1000;
+  const entregueEm = pedidoEntregue.entregueEm?.toDate().getTime() ?? Date.now();
+  const falta = Math.max(1500, entregueEm + espera - Date.now());
+  setTimeout(() => window.dispatchEvent(new CustomEvent("pedido-concluido", { detail: pedidoEntregue })), falta);
 }
 
 // O selo foi registrado junto com a confirmação do pagamento: mostra o cartão atualizado

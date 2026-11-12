@@ -4,7 +4,7 @@
 
 import { db } from "./firebase.js";
 import {
-  collection, addDoc, doc, getDoc, onSnapshot, updateDoc, query, where, orderBy, serverTimestamp, Timestamp, runTransaction,
+  collection, addDoc, doc, getDoc, setDoc, onSnapshot, updateDoc, query, where, orderBy, limit, serverTimestamp, Timestamp, runTransaction,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { agruparItens, calcularSubtotal, calcularTaxa, calcularTotal } from "./pedido.js";
 import { selosValidos } from "./fidelidade.js";
@@ -143,6 +143,16 @@ export async function confirmarPagamento(loja, pedido) {
   });
 }
 
+// O admin entrega o pedido (motoboy ou balcão). A hora da entrega conta o tempo
+// até o pedido de avaliação, para o cliente comer com calma antes.
+export function marcarEntregue(lojaId, id) {
+  return updateDoc(doc(db, "lojas", lojaId, "pedidos", id), {
+    status: "finalizado",
+    entregueEm: serverTimestamp(),
+    atualizadoEm: serverTimestamp(),
+  });
+}
+
 // Pagamento no recebimento que não aconteceu: o pedido fica marcado e não gera selo
 export function marcarNaoPago(lojaId, id) {
   return updateDoc(doc(db, "lojas", lojaId, "pedidos", id), {
@@ -159,4 +169,36 @@ export function cancelarPedido(lojaId, id) {
     atualizadoEm: serverTimestamp(),
     pagamentoAtualizadoEm: serverTimestamp(),
   });
+}
+
+// ---------- Avaliações (pós-venda) ----------
+// Ficam em lojas/{id da loja}/avaliacoes/{id do pedido}: o id da avaliação é o do pedido,
+// então cada pedido aceita uma única avaliação.
+
+export async function buscarPedido(lojaId, id) {
+  const documento = await getDoc(doc(db, "lojas", lojaId, "pedidos", id));
+  return documento.exists() ? { id: documento.id, ...documento.data() } : null;
+}
+
+export async function jaAvaliado(lojaId, pedidoId) {
+  return (await getDoc(doc(db, "lojas", lojaId, "avaliacoes", pedidoId))).exists();
+}
+
+export function salvarAvaliacao(lojaId, pedido, nota, comentario) {
+  return setDoc(doc(db, "lojas", lojaId, "avaliacoes", pedido.id), {
+    nota,
+    comentario: comentario || null,
+    cliente: pedido.cliente,
+    criadoEm: serverTimestamp(),
+  });
+}
+
+// O admin acompanha as avaliações mais recentes em tempo real
+export function acompanharAvaliacoes(lojaId, aoMudar, aoFalhar) {
+  const consulta = query(collection(db, "lojas", lojaId, "avaliacoes"), orderBy("criadoEm", "desc"), limit(100));
+  return onSnapshot(
+    consulta,
+    (resultado) => aoMudar(resultado.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    aoFalhar
+  );
 }

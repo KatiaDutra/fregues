@@ -9,10 +9,13 @@ import { normalizarTelefone, gerarIdDoCliente, criarCartaoFidelidade } from "./f
 import { statusDaLoja, descreverDias } from "./horario.js";
 import { formatarPreco } from "./pedido.js";
 import { fazerPedido } from "./fluxo-pedido.js";
+import { avaliarPedido, avaliarPorLink } from "./avaliacao.js";
 
 let loja = null;
-// true enquanto o bot conduz uma conversa com perguntas (pedido ou cartão fidelidade)
+// true enquanto o bot conduz uma conversa com perguntas (pedido, cartão fidelidade ou avaliação)
 let emFluxo = false;
+// Pedido concluído enquanto o cliente fazia outra coisa: a avaliação espera o fluxo atual terminar
+let avaliacaoPendente = null;
 
 const OPCOES_PRINCIPAIS = [
   { id: "pedido", rotulo: "Fazer pedido" },
@@ -119,11 +122,45 @@ function mostrarMenu() {
   mostrarOpcoes(OPCOES_PRINCIPAIS, escolherOpcao);
 }
 
+// Ao terminar um fluxo, faz a avaliação que estiver esperando, ou volta ao menu
+function encerrarFluxo() {
+  emFluxo = false;
+  if (avaliacaoPendente) {
+    const pedido = avaliacaoPendente;
+    avaliacaoPendente = null;
+    conduzirAvaliacao(pedido);
+    return;
+  }
+  mostrarMenu();
+}
+
+// ---------- Pós-venda ----------
+
+async function conduzirAvaliacao(pedido) {
+  if (emFluxo) {
+    avaliacaoPendente = pedido;
+    return;
+  }
+  emFluxo = true;
+  limparOpcoes();
+  try {
+    await avaliarPedido(loja, pedido);
+  } catch (erro) {
+    if (!(erro instanceof PedidoCancelado)) {
+      console.error(erro);
+      await botResponde("Não consegui registrar a avaliação agora. A loja pode te mandar o link para avaliar depois.");
+    }
+  }
+  encerrarFluxo();
+}
+
+// O acompanhamento do pedido (fluxo-pedido.js) avisa quando a cozinha conclui o pedido
+window.addEventListener("pedido-concluido", (evento) => conduzirAvaliacao(evento.detail));
+
 async function iniciarPedido() {
   emFluxo = true;
   await fazerPedido(loja);
-  emFluxo = false;
-  mostrarMenu();
+  encerrarFluxo();
 }
 
 // Consulta do cartão fidelidade pelo telefone
@@ -158,8 +195,7 @@ async function consultarCartao() {
     }
   }
 
-  emFluxo = false;
-  mostrarMenu();
+  encerrarFluxo();
 }
 
 async function responder(idDaResposta) {
@@ -221,8 +257,22 @@ export async function responderTexto(texto) {
   mostrarMenu();
 }
 
-export async function iniciarConversa(configuracaoDaLoja) {
+// pedidoParaAvaliar: id do pedido quando o cliente chega pelo link de avaliação
+export async function iniciarConversa(configuracaoDaLoja, pedidoParaAvaliar = null) {
   loja = configuracaoDaLoja;
+
+  if (pedidoParaAvaliar) {
+    definirEtapa(4);
+    await botResponde(`Olá! Eu sou o ${loja.loja.atendente}, do ${loja.loja.nome}. 🍔`);
+    emFluxo = true;
+    try {
+      await avaliarPorLink(loja, pedidoParaAvaliar);
+    } catch (erro) {
+      if (!(erro instanceof PedidoCancelado)) console.error(erro);
+    }
+    encerrarFluxo();
+    return;
+  }
   definirEtapa(0);
 
   await botResponde(`Olá! Eu sou o ${loja.loja.atendente}, do ${loja.loja.nome}. 🍔`);

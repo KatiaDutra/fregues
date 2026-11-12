@@ -113,6 +113,13 @@ export function descreverMomento(momento, entrega) {
   return entrega?.tipo === "entrega" ? "na entrega" : "na retirada";
 }
 
+// Pós-venda: o cliente só avalia depois de receber o pedido e de o pagamento estar confirmado.
+// Pago no pedido: o ok do admin vem antes, então quem libera é o "entregue" da cozinha.
+// Pago no recebimento: a cozinha conclui antes, então quem libera é o ok do admin.
+export function podeAvaliar(pedido) {
+  return pedido.status === "finalizado" && pedido.situacaoPagamento === "confirmado";
+}
+
 // "Pix, pago no pedido" ou "Dinheiro na retirada, troco para R$ 50,00"
 export function descreverPagamento(pedido) {
   const separador = pedido.momentoPagamento === "pedido" ? ", " : " ";

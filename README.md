@@ -51,8 +51,8 @@ O Freguês tem três perfis, cada um com uma tela e permissões próprias:
 | Perfil | Tela | O que faz |
 |---|---|---|
 | Cliente | `index.html` | Conversa com o bot, monta e envia o pedido, acompanha o status e consulta o cartão fidelidade. Não precisa de login. |
-| Cozinha | `cozinha.html` | Vê os pedidos liberados e avança o preparo. Sabe se o pedido já está pago ou se precisa cobrar na entrega, mas não mexe em pagamentos nem em selos. |
-| Administrador | `admin.html` | Confere e confirma os pagamentos, marca pedidos não pagos, cancela pedidos sem pagamento e acompanha o caixa do dia. |
+| Cozinha | `cozinha.html` | Vê os pedidos liberados e avança o preparo até "pronto". Sabe se o pedido já está pago ou se precisa cobrar na entrega, mas não mexe em pagamentos, entregas nem selos. |
+| Administrador | `admin.html` | Confere e confirma os pagamentos, marca a entrega (motoboy ou balcão), marca pedidos não pagos, cancela pedidos sem pagamento, acompanha o caixa do dia e lê as avaliações. |
 
 Separar quem produz de quem confere o dinheiro é um princípio básico de controle: impede que um pedido não pago gere selo de fidelidade. Uma mesma pessoa pode ter os dois papéis, o que é comum em negócios pequenos, e nesse caso navega entre as duas telas pelo topo.
 
@@ -67,7 +67,11 @@ Cada loja escolhe no arquivo de configuração quais formas aceita em cada momen
 
 O selo de fidelidade é registrado **na mesma operação** em que o admin confirma o pagamento. Pedido marcado como não pago fica numa lista própria e não gera selo; se o cliente pagar depois, o admin confirma por lá. Uma confirmação não pode ser desfeita, porque o selo já foi registrado junto.
 
-A confirmação é manual de propósito: com custo zero, não há integração com banco ou maquininha. Num próximo passo, essa conferência pode ser automatizada com a API de um meio de pagamento.
+### Como funciona o pós-venda
+
+A cozinha termina o trabalho dela no "pronto". Quem marca a entrega é o administrador, que lida com o motoboy e com o balcão. O cliente só avalia depois de receber o pedido e de o pagamento estar confirmado, e o pedido de avaliação chega **10 minutos depois da entrega**, para ele comer com calma (o tempo é definido por loja, em `posVenda.minutosAposEntrega`). Se o pagamento for confirmado depois desse prazo, a avaliação vem logo após a confirmação. Nesse momento, o bot pergunta ao cliente como foi, com notas de 1 a 5 e um comentário opcional. Se o cliente fechou o chat antes, o administrador copia uma mensagem de agradecimento pronta, com um link para avaliar, e cola na conversa do cliente no WhatsApp. O Freguês não guarda o telefone do cliente, então não envia mensagens sozinho: o dono cola e envia, mantendo a privacidade e o custo zero.
+
+A confirmação do pagamento é manual de propósito: com custo zero, não há integração com banco ou maquininha. Num próximo passo, essa conferência pode ser automatizada com a API de um meio de pagamento.
 
 ## Roteiro de desenvolvimento
 
@@ -93,9 +97,11 @@ A confirmação é manual de propósito: com custo zero, não há integração c
 - [x] Selo de fidelidade registrado somente com o pagamento confirmado
 
 ### Versão 4: pós-venda
-- [ ] Avaliação do pedido de 1 a 5
-- [ ] Mensagem de agradecimento pronta para o dono enviar
-- [ ] Resumo das avaliações com IA
+- [x] Entrega marcada pelo administrador, para tele e retirada
+- [x] Avaliação do pedido de 1 a 5, com comentário opcional, alguns minutos depois da entrega
+- [x] Mensagem de agradecimento pronta para o dono copiar, com link para avaliar depois
+- [x] Avaliações no painel do administrador: nota média, distribuição e comentários, com destaque para as notas baixas
+- [ ] Resumo das avaliações com IA (bônus)
 
 ### Versão 5: aplicativo e integração
 - [ ] Chat instalável no celular (PWA), com o ícone da loja
@@ -108,8 +114,10 @@ Os dados ficam no Firestore, protegidos pelas regras em `firestore.rules`. Os pa
 
 - qualquer pessoa pode **criar** um pedido, desde que ele tenha o formato esperado, comece com o pagamento pendente e no status certo para o momento do pagamento;
 - o cliente consulta **apenas o próprio pedido**, pelo código dele;
-- a **cozinha** só avança o preparo, na ordem certa, e só de pedidos já liberados: um pedido esperando pagamento não pode ser preparado;
+- a **cozinha** só avança o preparo, na ordem certa, até "pronto", e só de pedidos já liberados: um pedido esperando pagamento não pode ser preparado;
+- só o **administrador** marca um pedido pronto como entregue, e a hora da entrega é registrada pelo servidor;
 - o **administrador** é o único que muda a situação do pagamento, e um pagamento confirmado não pode ser desfeito;
+- uma **avaliação** só pode ser feita para um pedido que existe, foi entregue e está pago, uma única vez, e não pode ser alterada nem apagada; só o administrador lista as avaliações;
 - os **selos de fidelidade** só podem ser registrados pelo administrador, então nenhum selo nasce sem pagamento confirmado e nenhum cliente consegue dar selos a si mesmo;
 - ninguém pode apagar pedidos, e a criação de novas contas está desativada no Authentication.
 
@@ -165,11 +173,12 @@ fregues/
 │   ├── pedido.js         Regras e cálculo do pedido
 │   ├── whatsapp.js       Resumo e link para o WhatsApp
 │   ├── firebase.js       Conexão com o Firebase
-│   ├── banco.js          Pedidos, pagamentos, equipe e selos no Firestore
+│   ├── banco.js          Pedidos, pagamentos, equipe, selos e avaliações no Firestore
 │   ├── acesso.js         Login da equipe e conferência dos papéis
 │   ├── cozinha.js        Lógica do painel da cozinha
 │   ├── admin.js          Lógica do painel do administrador
 │   ├── fidelidade.js     Telefone protegido, selos e desenho do cartão
+│   ├── avaliacao.js      Avaliação do pedido no chat e pelo link
 │   └── ia.js             Camada opcional de IA
 ├── config/
 │   └── ze-burger.json    Cardápio e regras da loja de demonstração

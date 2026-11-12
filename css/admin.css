@@ -130,6 +130,12 @@
 .fila--receber { --cor-coluna: var(--amarelo); }
 .fila--nao-pagos { --cor-coluna: var(--vermelho); }
 .fila--pagos { --cor-coluna: var(--verde); }
+.fila--avaliacoes { --cor-coluna: var(--amarelo); }
+.fila--entregar { --cor-coluna: var(--marrom); }
+
+.fila--avaliacoes .contador {
+  color: var(--marrom-escuro);
+}
 
 .fila h2 {
   display: flex;
@@ -317,4 +323,100 @@
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* ---------- Avaliações ---------- */
+
+.avaliacoes:not(:empty) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 32px;
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--branco);
+  border: 1px solid var(--linha);
+}
+
+.avaliacoes__media {
+  display: flex;
+  flex-direction: column;
+}
+
+.avaliacoes__media strong {
+  font-family: "Baloo 2", system-ui, sans-serif;
+  font-size: 2.6rem;
+  line-height: 1;
+  color: var(--marrom);
+}
+
+.avaliacoes__media strong::after {
+  content: " ★";
+  font-size: 1.6rem;
+  color: var(--amarelo);
+}
+
+.avaliacoes__media span {
+  color: var(--suave);
+  font-size: 0.88rem;
+}
+
+.avaliacoes__barras {
+  flex: 1;
+  min-width: 220px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.avaliacoes__barras li {
+  display: grid;
+  grid-template-columns: 34px 1fr 24px;
+  align-items: center;
+  gap: 8px;
+}
+
+.barra {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(var(--amarelo), var(--amarelo)) left / var(--parte) 100% no-repeat, var(--linha);
+}
+
+.avaliacao {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--branco);
+  border: 1px solid var(--linha);
+}
+
+.avaliacao--atencao {
+  border-left: 4px solid var(--vermelho);
+}
+
+.avaliacao__topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.avaliacao__estrelas {
+  color: color-mix(in srgb, var(--amarelo) 80%, var(--marrom));
+  letter-spacing: 0.08em;
+}
+
+.avaliacao__comentario {
+  margin: 6px 0 0;
+  max-width: 70ch;
+}
+
+.avaliado {
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--amarelo) 70%, var(--marrom));
+  font-weight: 700;
 }

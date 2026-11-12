@@ -21,8 +21,8 @@ const aviso = document.querySelector("#aviso");
 const PROXIMO_PASSO = {
   recebido: { status: "preparando", rotulo: "Começar preparo" },
   preparando: { status: "pronto", rotulo: "Marcar como pronto" },
-  pronto: { status: "finalizado", rotulo: "Finalizar" },
 };
+// Depois do "pronto", a entrega fica com o admin, que lida com o motoboy e com o balcão
 
 // ---------- Quadro ----------
 
@@ -70,8 +70,15 @@ function criarCartao(pedido) {
   cartao.append(criarElemento("p", "cartao__info", entrega));
   cartao.append(criarElemento("p", "cartao__info", `${descreverPagamento(pedido)}. Total ${formatarPreco(pedido.total)}`));
 
-  // Botão para avançar o status
+  // Pedido pronto: a cozinha só espera o admin marcar a entrega
   const passo = PROXIMO_PASSO[pedido.status];
+  if (!passo) {
+    const espera = pedido.entrega.tipo === "entrega" ? "Aguardando entrega" : "Aguardando retirada";
+    cartao.append(criarElemento("p", "cartao__espera", espera));
+    return cartao;
+  }
+
+  // Botão para avançar o status
   const botao = criarElemento("button", "botao-principal", passo.rotulo);
   botao.type = "button";
   botao.addEventListener("click", async () => {

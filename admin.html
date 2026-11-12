@@ -73,9 +73,15 @@
         <ul class="fila__lista" id="lista-aguardando"></ul>
       </section>
 
+      <section class="fila fila--entregar" aria-labelledby="titulo-entregar">
+        <h2 id="titulo-entregar">Prontos para entregar <span class="contador" id="contador-entregar">0</span></h2>
+        <p class="fila__ajuda">A cozinha terminou. Marque como entregue quando o motoboy entregar ou o cliente retirar no balcão.</p>
+        <ul class="fila__lista" id="lista-entregar"></ul>
+      </section>
+
       <section class="fila fila--receber" aria-labelledby="titulo-receber">
         <h2 id="titulo-receber">A receber <span class="contador" id="contador-receber">0</span></h2>
-        <p class="fila__ajuda">Pagamento na entrega ou na retirada. Confirme quando o dinheiro, o Pix ou a maquininha baterem.</p>
+        <p class="fila__ajuda">Pagamento na entrega ou na retirada, de pedidos ainda na cozinha ou já entregues. Confirme quando o dinheiro, o Pix ou a maquininha baterem.</p>
         <ul class="fila__lista" id="lista-receber"></ul>
       </section>
 
@@ -83,6 +89,13 @@
         <h2 id="titulo-nao-pagos">Não pagos <span class="contador" id="contador-nao-pagos">0</span></h2>
         <p class="fila__ajuda">Pedidos sem pagamento. Se o cliente pagar depois, confirme por aqui e o selo é registrado.</p>
         <ul class="fila__lista" id="lista-nao-pagos"></ul>
+      </section>
+
+      <section class="fila fila--avaliacoes" aria-labelledby="titulo-avaliacoes">
+        <h2 id="titulo-avaliacoes">Avaliações <span class="contador" id="contador-avaliacoes">0</span></h2>
+        <p class="fila__ajuda">Para pedir uma avaliação, use o botão Copiar agradecimento num pedido entregue e pago e cole a mensagem na conversa do cliente no WhatsApp.</p>
+        <div class="avaliacoes" id="resumo-avaliacoes"></div>
+        <ul class="fila__lista" id="lista-avaliacoes"></ul>
       </section>
 
       <details class="fila fila--pagos">

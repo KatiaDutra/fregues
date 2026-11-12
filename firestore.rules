@@ -4,9 +4,11 @@ rules_version = '2';
 // Cole este conteúdo em Firestore Database > Regras, no console do Firebase, e publique.
 //
 // Três perfis:
-//   cliente: qualquer pessoa, sem login. Cria pedidos e consulta o próprio pedido e o próprio cartão.
-//   cozinha: avança o preparo dos pedidos já liberados. Não mexe em pagamento nem em selos.
-//   admin:   confirma pagamentos, marca pedidos não pagos, cancela pedidos e registra os selos.
+//   cliente: qualquer pessoa, sem login. Cria pedidos, consulta o próprio pedido e o próprio cartão
+//            e avalia o pedido depois de concluído.
+//   cozinha: avança o preparo dos pedidos já liberados, até "pronto". Não mexe em pagamento, entrega nem selos.
+//   admin:   confirma pagamentos, marca pedidos não pagos, cancela pedidos, marca a entrega,
+//            registra os selos e vê as avaliações.
 // Os papéis ficam em equipe/{uid}, num documento criado à mão no console:
 //   { "nome": "Cozinha", "papeis": ["cozinha"] }
 
@@ -54,14 +56,21 @@ service cloud.firestore {
           || (pedido.momentoPagamento == "recebimento" && pedido.status == "recebido"));
     }
 
-    // A cozinha só avança o preparo, e só de pedidos já liberados
+    // A cozinha só avança o preparo, e só de pedidos já liberados. O trabalho dela termina no "pronto".
     function cozinhaAvanca() {
       let antes = resource.data.status;
       let depois = request.resource.data.status;
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "atualizadoEm"])
         && ((antes == "recebido" && depois == "preparando")
-          || (antes == "preparando" && depois == "pronto")
-          || (antes == "pronto" && depois == "finalizado"));
+          || (antes == "preparando" && depois == "pronto"));
+    }
+
+    // O admin marca a entrega (motoboy ou balcão) de um pedido pronto, com a hora da entrega
+    function adminEntrega() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "entregueEm", "atualizadoEm"])
+        && resource.data.status == "pronto"
+        && request.resource.data.status == "finalizado"
+        && request.resource.data.entregueEm == request.time;
     }
 
     // O admin cuida do pagamento. Um pagamento confirmado não pode ser desfeito,
@@ -90,9 +99,35 @@ service cloud.firestore {
       allow get: if true;
       allow list: if ehCozinha() || ehAdmin();
 
-      allow update: if (ehCozinha() && cozinhaAvanca()) || (ehAdmin() && adminAtualizaPagamento());
+      allow update: if (ehCozinha() && cozinhaAvanca())
+        || (ehAdmin() && (adminAtualizaPagamento() || adminEntrega()));
 
       allow delete: if false;
+    }
+
+    // ---------- Avaliações ----------
+    // O id da avaliação é o id do pedido. Só se avalia um pedido que existe, foi entregue e está pago,
+    // uma única vez (a avaliação não pode ser alterada nem apagada).
+    match /lojas/{lojaId}/avaliacoes/{pedidoId} {
+      function caminhoPedido() {
+        return /databases/$(database)/documents/lojas/$(lojaId)/pedidos/$(pedidoId);
+      }
+
+      function avaliacaoValida(avaliacao) {
+        let pedido = get(caminhoPedido()).data;
+        return pedido.status == "finalizado"
+          && pedido.situacaoPagamento == "confirmado"
+          && avaliacao.keys().hasOnly(["nota", "comentario", "cliente", "criadoEm"])
+          && avaliacao.nota is int && avaliacao.nota >= 1 && avaliacao.nota <= 5
+          && (avaliacao.comentario == null || (avaliacao.comentario is string && avaliacao.comentario.size() <= 300))
+          && avaliacao.cliente == pedido.cliente
+          && avaliacao.criadoEm == request.time;
+      }
+
+      allow create: if exists(caminhoPedido()) && avaliacaoValida(request.resource.data);
+      allow get: if true;
+      allow list: if ehAdmin();
+      allow update, delete: if false;
     }
 
     // ---------- Cartões fidelidade ----------

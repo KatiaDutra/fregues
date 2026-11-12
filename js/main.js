@@ -38,7 +38,9 @@ async function iniciar() {
     configurarAvatar(loja.loja.avatar);
     preencherCabecalho(loja);
     ativarCampoDeTexto();
-    iniciarConversa(loja);
+    // Link de avaliação enviado pela loja: index.html?avaliar=<id do pedido>
+    const pedidoParaAvaliar = new URLSearchParams(location.search).get("avaliar");
+    iniciarConversa(loja, pedidoParaAvaliar);
   } catch (erro) {
     console.error(erro);
     document.querySelector("#mensagens").textContent =

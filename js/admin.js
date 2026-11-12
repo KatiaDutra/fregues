@@ -4,8 +4,10 @@
 // o selo nasce junto com a confirmação, então pedido não pago não gera selo.
 
 import { carregarConfiguracao } from "./config.js";
-import { acompanharPedidosRecentes, confirmarPagamento, marcarNaoPago, cancelarPedido, numeroDoPedido } from "./banco.js";
-import { formatarPreco, descreverPagamento } from "./pedido.js";
+import {
+  acompanharPedidosRecentes, acompanharAvaliacoes, confirmarPagamento, marcarNaoPago, cancelarPedido, marcarEntregue, numeroDoPedido,
+} from "./banco.js";
+import { formatarPreco, descreverPagamento, podeAvaliar } from "./pedido.js";
 import { protegerPainel, tocarAviso, tempoDecorrido, criarElemento } from "./acesso.js";
 
 const HORAS_DE_HISTORICO = 7 * 24;
@@ -13,6 +15,9 @@ const HORAS_DE_HISTORICO = 7 * 24;
 let loja = null;
 let pedidos = [];
 let pararDeOuvir = null;
+let pararAvaliacoes = null;
+let avaliacoes = [];
+let avaliados = new Map(); // id do pedido -> nota
 let idsAguardando = null; // para tocar o aviso só quando chega um pedido novo esperando pagamento
 
 const aviso = document.querySelector("#aviso");
@@ -33,6 +38,8 @@ const STATUS_DO_PREPARO = {
 function filaDoPedido(pedido) {
   // Pedidos feitos antes da Versão 3 não têm pagamento controlado (e já geraram selo): ficam de fora
   if (!pedido.situacaoPagamento) return null;
+  // Pronto na cozinha: a primeira coisa a fazer é entregar, esteja pago ou não
+  if (pedido.status === "pronto" && pedido.situacaoPagamento !== "nao_pago") return "entregar";
   if (pedido.situacaoPagamento === "confirmado") return "pagos";
   if (pedido.situacaoPagamento === "nao_pago") return pedido.status === "cancelado" ? null : "nao-pagos";
   if (pedido.status === "aguardando_pagamento") return "aguardando";
@@ -51,6 +58,20 @@ const ACOES = {
   "nao-pagos": [{ id: "confirmar", rotulo: "Recebi depois", principal: true }],
   pagos: [],
 };
+
+// Ações de cada linha: as da fila, mais a entrega quando o pedido está pronto
+function acoesDoPedido(pedido, fila) {
+  if (fila === "entregar") {
+    const acoes = [{ id: "entregar", rotulo: "Marcar como entregue", principal: true }];
+    if (pedido.situacaoPagamento === "pendente") {
+      acoes.push({ id: "confirmar", rotulo: "Confirmar pagamento" }, { id: "nao-pago", rotulo: "Não pago" });
+    }
+    return acoes;
+  }
+  const acoes = [...ACOES[fila]];
+  if (pedido.status === "pronto") acoes.push({ id: "entregar", rotulo: "Marcar como entregue" });
+  return acoes;
+}
 
 // ---------- Confirmação ----------
 
@@ -73,13 +94,44 @@ function textoDaConfirmacao(pedido) {
   return partes.join(" ");
 }
 
+// Mensagem pronta para o dono colar na conversa do cliente no WhatsApp.
+// O Freguês não guarda o telefone do cliente, então não envia sozinho: o dono cola e envia.
+function mensagemDeAgradecimento(pedido) {
+  const link = new URL(`index.html?avaliar=${pedido.id}`, location.href).href;
+  const nome = pedido.cliente.split(" ")[0];
+  return `Oi, ${nome}! Obrigado pelo pedido no ${loja.loja.nome}. 💛 Conta pra gente como foi? Leva menos de um minuto: ${link}`;
+}
+
 async function executar(acao, pedido) {
   const numero = `#${numeroDoPedido(pedido.id)}`;
+
+  if (acao === "agradecer") {
+    const mensagem = mensagemDeAgradecimento(pedido);
+    try {
+      await navigator.clipboard.writeText(mensagem);
+      mostrarAviso("Mensagem copiada! Cole na conversa do cliente no WhatsApp.");
+    } catch {
+      // Sem acesso à área de transferência: mostra a mensagem para copiar à mão
+      await perguntar("Copie a mensagem", mensagem, "Pronto");
+    }
+    return;
+  }
 
   if (acao === "confirmar") {
     if (!(await perguntar(`Confirmar o pagamento do pedido ${numero}?`, textoDaConfirmacao(pedido), "Confirmar pagamento"))) return;
     const alerta = await confirmarPagamento(loja, pedido);
     mostrarAviso(alerta ?? `Pagamento do pedido ${numero} confirmado.`);
+  }
+
+  if (acao === "entregar") {
+    const onde = pedido.entrega.tipo === "entrega" ? "entregue pelo motoboy" : "retirado no balcão";
+    const minutos = loja.posVenda.minutosAposEntrega;
+    const avaliacao = pedido.situacaoPagamento === "confirmado"
+      ? `O cliente recebe o pedido de avaliação no chat ${minutos} minutos depois.`
+      : `Como o pagamento ainda não foi confirmado, a avaliação só será pedida depois da confirmação.`;
+    if (!(await perguntar(`Pedido ${numero} entregue?`, `${pedido.cliente}, ${onde}. ${avaliacao}`, "Marcar como entregue"))) return;
+    await marcarEntregue(loja.loja.id, pedido.id);
+    mostrarAviso(`Pedido ${numero} entregue.`);
   }
 
   if (acao === "nao-pago") {
@@ -125,7 +177,15 @@ function criarLinha(pedido, fila) {
   if (pedido.clienteId) situacao.append(criarElemento("span", "etiqueta", pedido.usaPremio ? "Usando prêmio" : "Cartão fidelidade"));
   linha.append(situacao);
 
-  const acoes = ACOES[fila];
+  const acoes = acoesDoPedido(pedido, fila);
+  // Pós-venda: pedido entregue, pago e ainda sem avaliação ganha o botão de agradecimento
+  if (podeAvaliar(pedido)) {
+    if (avaliados.has(pedido.id)) {
+      situacao.append(criarElemento("span", "avaliado", `Avaliado: ${"★".repeat(avaliados.get(pedido.id))}`));
+    } else {
+      acoes.push({ id: "agradecer", rotulo: "Copiar agradecimento" });
+    }
+  }
   if (acoes.length) {
     const botoes = criarElemento("div", "pedido__acoes");
     acoes.forEach((acao) => {
@@ -150,7 +210,7 @@ function criarLinha(pedido, fila) {
 }
 
 function desenharFilas() {
-  const filas = { aguardando: [], receber: [], "nao-pagos": [], pagos: [] };
+  const filas = { aguardando: [], entregar: [], receber: [], "nao-pagos": [], pagos: [] };
   pedidos.forEach((pedido) => {
     const fila = filaDoPedido(pedido);
     if (fila) filas[fila].push(pedido);
@@ -160,6 +220,7 @@ function desenharFilas() {
 
   const VAZIAS = {
     aguardando: "Nenhum pedido esperando pagamento.",
+    entregar: "Nenhum pedido pronto esperando entrega.",
     receber: "Nada a receber agora.",
     "nao-pagos": "Nenhum pedido sem pagamento.",
     pagos: "Nenhum pagamento confirmado nos últimos 7 dias.",
@@ -178,11 +239,56 @@ function desenharCaixa() {
   const doDia = pedidos.filter((p) => p.criadoEm && p.criadoEm.toDate().toDateString() === hoje && p.status !== "cancelado");
   const somar = (lista) => formatarPreco(lista.reduce((total, p) => total + p.total, 0));
 
-  document.querySelector("#total-recebido").textContent = somar(doDia.filter((p) => filaDoPedido(p) === "pagos"));
-  document.querySelector("#total-a-receber").textContent = somar(doDia.filter((p) => filaDoPedido(p) === "receber"));
+  document.querySelector("#total-recebido").textContent = somar(doDia.filter((p) => p.situacaoPagamento === "confirmado"));
+  const aReceber = (p) => p.situacaoPagamento === "pendente" && p.status !== "aguardando_pagamento";
+  document.querySelector("#total-a-receber").textContent = somar(doDia.filter(aReceber));
   document.querySelector("#total-aguardando").textContent = somar(doDia.filter((p) => filaDoPedido(p) === "aguardando"));
   document.querySelector("#total-nao-pagos").textContent = somar(doDia.filter((p) => filaDoPedido(p) === "nao-pagos"));
   document.querySelector("#quantidade-pedidos").textContent = doDia.length;
+}
+
+function criarAvaliacao(avaliacao) {
+  const item = criarElemento("li", "avaliacao");
+  const topo = criarElemento("div", "avaliacao__topo");
+  topo.append(criarElemento("span", "avaliacao__estrelas", "★".repeat(avaliacao.nota) + "☆".repeat(5 - avaliacao.nota)));
+  topo.lastChild.setAttribute("aria-label", `Nota ${avaliacao.nota} de 5`);
+  topo.append(criarElemento("strong", "", avaliacao.cliente.split(" ")[0]));
+  topo.append(criarElemento("small", "pedido__hora", `#${numeroDoPedido(avaliacao.id)}, ${quando(avaliacao.criadoEm?.toDate())}`));
+  item.append(topo);
+  if (avaliacao.comentario) item.append(criarElemento("p", "avaliacao__comentario", avaliacao.comentario));
+  if (avaliacao.nota <= 2) item.classList.add("avaliacao--atencao");
+  return item;
+}
+
+function desenharAvaliacoes() {
+  document.querySelector("#contador-avaliacoes").textContent = avaliacoes.length;
+  const resumo = document.querySelector("#resumo-avaliacoes");
+  const lista = document.querySelector("#lista-avaliacoes");
+
+  if (avaliacoes.length === 0) {
+    resumo.replaceChildren();
+    lista.replaceChildren(criarElemento("li", "fila__vazia", "Nenhuma avaliação ainda."));
+    return;
+  }
+
+  // Nota média e quantas avaliações de cada nota, de 5 a 1
+  const media = avaliacoes.reduce((total, a) => total + a.nota, 0) / avaliacoes.length;
+  const nota = criarElemento("div", "avaliacoes__media");
+  nota.append(criarElemento("strong", "", media.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })));
+  nota.append(criarElemento("span", "", `média de ${avaliacoes.length} ${avaliacoes.length === 1 ? "avaliação" : "avaliações"}`));
+
+  const barras = criarElemento("ul", "avaliacoes__barras");
+  for (let estrelas = 5; estrelas >= 1; estrelas--) {
+    const quantidade = avaliacoes.filter((a) => a.nota === estrelas).length;
+    const linha = criarElemento("li");
+    linha.append(criarElemento("span", "", `${estrelas} ★`));
+    const barra = criarElemento("span", "barra");
+    barra.style.setProperty("--parte", `${(quantidade / avaliacoes.length) * 100}%`);
+    linha.append(barra, criarElemento("span", "", String(quantidade)));
+    barras.append(linha);
+  }
+  resumo.replaceChildren(nota, barras);
+  lista.replaceChildren(...avaliacoes.slice(0, 20).map(criarAvaliacao));
 }
 
 function desenhar() {
@@ -228,7 +334,23 @@ function comecarAOuvir() {
 
 function pararDeAcompanhar() {
   if (pararDeOuvir) pararDeOuvir();
+  if (pararAvaliacoes) pararAvaliacoes();
   pararDeOuvir = null;
+  pararAvaliacoes = null;
+}
+
+function acompanharAsAvaliacoes() {
+  if (pararAvaliacoes) return;
+  pararAvaliacoes = acompanharAvaliacoes(
+    loja.loja.id,
+    (lista) => {
+      avaliacoes = lista;
+      avaliados = new Map(lista.map((a) => [a.id, a.nota]));
+      desenharAvaliacoes();
+      if (pedidos.length) desenharFilas();
+    },
+    (erro) => console.error(erro)
+  );
 }
 
 // Os tempos de espera são atualizados a cada 30 segundos (sem redesenhar com o diálogo aberto)
@@ -242,7 +364,10 @@ async function iniciar() {
   loja = await carregarConfiguracao();
   document.querySelector("#nome-da-loja").textContent = `Pagamentos de ${loja.loja.nome}`;
   document.querySelector("#data-de-hoje").textContent = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
-  protegerPainel("admin", comecarAOuvir, pararDeAcompanhar);
+  protegerPainel("admin", () => {
+    comecarAOuvir();
+    acompanharAsAvaliacoes();
+  }, pararDeAcompanhar);
 }
 
 iniciar();
