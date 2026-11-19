@@ -74,7 +74,17 @@ No painel do administrador, **Exportar vendas** gera, para o período escolhido:
 - **Itens vendidos (CSV):** uma linha por item, para produtos mais vendidos e curva ABC;
 - **Dados completos (JSON):** o contrato de dados inteiro, para importar em outros sistemas.
 
-Os CSV abrem direto no Excel e no Power BI, no padrão brasileiro. Como o Freguês e o [Centraliza](https://github.com/KatiaDutra/centraliza) usam o mesmo projeto do Firebase, o Centraliza poderá ler essas vendas direto do banco, transformando cada venda em receita e cada item em baixa de estoque.
+Os CSV abrem direto no Excel e no Power BI, no padrão brasileiro.
+
+## Integração com o Centraliza
+
+O [Centraliza](https://github.com/KatiaDutra/centraliza) é a gestão do negócio. Os dois sistemas usam o **mesmo projeto do Firebase**, então compartilham o banco e o login, e o arquivo `firestore.rules` é igual nos dois repositórios.
+
+- Um pedido marcado como **não pago** vira um atendimento do Financeiro no Centraliza, que se resolve sozinho se o pagamento for confirmado depois.
+- Uma avaliação de **1 ou 2 estrelas** vira um atendimento do Suporte, com o comentário do cliente.
+- Pela tela de entrada do Centraliza, a cozinha cai direto no painel da cozinha, e o administrador chega aos pagamentos pelo menu.
+
+O próximo passo é o Centraliza ler as vendas, transformando cada venda em receita e cada item em baixa de estoque.
 
 ## Perfis de acesso
 
@@ -142,8 +152,9 @@ A confirmação do pagamento é manual de propósito: com custo zero, não há i
 - [x] Vendas confirmadas em formato padronizado, com contrato de dados documentado
 - [x] Exportação das vendas e dos itens vendidos para planilha, Power BI e JSON
 
-### Próximo passo: integração com o Centraliza
-- [ ] Pedidos não pagos e avaliações ruins viram atendimentos no [Centraliza](https://github.com/KatiaDutra/centraliza)
+### Integração com o Centraliza
+- [x] Mesmo projeto do Firebase e mesmo login: cada pessoa da equipe entra uma vez e chega à tela do seu papel
+- [x] Pedidos não pagos e avaliações de 1 ou 2 estrelas viram atendimentos no [Centraliza](https://github.com/KatiaDutra/centraliza), e o não pago se resolve sozinho quando o pagamento é confirmado
 - [ ] Vendas do Freguês como receitas e baixa de estoque na gestão do negócio
 
 ## Segurança dos dados
@@ -171,7 +182,7 @@ Se o Firebase estiver indisponível, o chat continua funcionando e o pedido segu
 ## Tecnologias
 
 - HTML, CSS e JavaScript (sem frameworks)
-- Firebase, no plano gratuito (Firestore e Authentication)
+- Firebase, no plano gratuito (Firestore e Authentication), compartilhado com o Centraliza
 - Cloudflare Workers, no plano gratuito, para a função intermediária da IA
 - Links `wa.me` do WhatsApp
 - GitHub Pages

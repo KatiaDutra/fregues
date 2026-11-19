@@ -1,16 +1,22 @@
 rules_version = '2';
 
-// Regras de segurança do Freguês.
+// Regras de segurança do Freguês e do Centraliza.
+// Os dois sistemas usam o mesmo projeto do Firebase, então este arquivo é IGUAL
+// nos repositórios fregues e centraliza. Ao mudar um, copie para o outro.
 // Cole este conteúdo em Firestore Database > Regras, no console do Firebase, e publique.
 //
-// Três perfis:
+// Perfis no Freguês:
 //   cliente: qualquer pessoa, sem login. Cria pedidos, consulta o próprio pedido e o próprio cartão
 //            e avalia o pedido depois de concluído.
 //   cozinha: avança o preparo dos pedidos já liberados, até "pronto". Não mexe em pagamento, entrega nem selos.
 //   admin:   confirma pagamentos, marca pedidos não pagos, cancela pedidos, marca a entrega,
 //            registra os selos e as vendas, exporta as vendas e vê as avaliações.
+// Perfis no Centraliza (gestão de atendimentos):
+//   admin:       todos os departamentos; é o único que exclui atendimentos.
+//   financeiro:  só os atendimentos do Financeiro.
+//   atendimento: só os de Vendas, Suporte e Entregas.
 // Os papéis ficam em equipe/{uid}, num documento criado à mão no console:
-//   { "nome": "Cozinha", "papeis": ["cozinha"] }
+//   { "nome": "Cozinha", "papeis": ["cozinha"] }   (uma pessoa pode ter vários papéis)
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -29,6 +35,8 @@ service cloud.firestore {
 
     function ehCozinha() { return temPapel("cozinha"); }
     function ehAdmin() { return temPapel("admin"); }
+    function ehFinanceiro() { return temPapel("financeiro"); }
+    function ehAtendimento() { return temPapel("atendimento"); }
 
     // Cada pessoa da equipe lê só os próprios papéis. Ninguém altera pelo site:
     // os documentos são criados e editados apenas no console do Firebase.
@@ -157,6 +165,63 @@ service cloud.firestore {
       allow list: if ehAdmin();
       allow create, update: if ehAdmin();
       allow delete: if false;
+    }
+
+    // ==========================================================
+    // CENTRALIZA
+    // ==========================================================
+
+    function ehGestao() { return ehAdmin() || ehFinanceiro() || ehAtendimento(); }
+
+    // Departamentos que quem não é admin pode ver (o admin vê todos)
+    function departamentosDoUsuario() {
+      return (ehFinanceiro() ? ["Financeiro"] : [])
+        .concat(ehAtendimento() ? ["Vendas", "Suporte", "Entregas"] : []);
+    }
+
+    function podeVer(departamento) {
+      return ehAdmin() || departamento in departamentosDoUsuario();
+    }
+
+    function atendimentoValido(a) {
+      return a.keys().hasOnly(["id", "cliente", "telefone", "departamento", "prioridade", "assunto", "descricao",
+          "status", "dataAbertura", "ultimaAtualizacao", "historico", "origem", "referencia"])
+        && a.id is int && a.id >= 1001
+        && a.cliente is string && a.cliente.size() > 0 && a.cliente.size() <= 80
+        && a.telefone is string && a.telefone.size() <= 20
+        && a.departamento in ["Vendas", "Suporte", "Financeiro", "Entregas"]
+        && a.prioridade in ["baixa", "media", "alta"]
+        && a.status in ["aberto", "em-andamento", "aguardando", "resolvido", "cancelado"]
+        && a.assunto is string && a.assunto.size() > 0 && a.assunto.size() <= 80
+        && a.descricao is string && a.descricao.size() > 0 && a.descricao.size() <= 500
+        && a.historico is list && a.historico.size() <= 100
+        && a.origem in ["manual", "fregues"];
+    }
+
+    match /lojas/{lojaId}/atendimentos/{atendimentoId} {
+      // Uma consulta só é aceita se pedir apenas os departamentos permitidos
+      allow get: if ehAdmin() || (ehGestao() && resource != null && podeVer(resource.data.departamento));
+      allow list: if ehGestao() && podeVer(resource.data.departamento);
+
+      allow create: if ehGestao() && atendimentoValido(request.resource.data)
+        && podeVer(request.resource.data.departamento);
+
+      // Na atualização, o número, o departamento e a abertura não mudam
+      allow update: if ehGestao() && podeVer(resource.data.departamento)
+        && atendimentoValido(request.resource.data)
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.departamento == resource.data.departamento
+        && request.resource.data.dataAbertura == resource.data.dataAbertura;
+
+      allow delete: if ehAdmin();
+    }
+
+    // Contador dos números dos atendimentos (#1001, #1002...): só avança
+    match /lojas/{lojaId}/contadores/{nome} {
+      allow read: if ehGestao();
+      allow write: if ehGestao() && request.resource.data.keys().hasOnly(["proximo"])
+        && request.resource.data.proximo is int
+        && (resource == null || request.resource.data.proximo > resource.data.proximo);
     }
   }
 }
