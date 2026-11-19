@@ -5,10 +5,11 @@
 
 import { carregarConfiguracao } from "./config.js";
 import {
-  acompanharPedidosRecentes, acompanharAvaliacoes, confirmarPagamento, marcarNaoPago, cancelarPedido, marcarEntregue, numeroDoPedido,
+  acompanharPedidosRecentes, acompanharAvaliacoes, confirmarPagamento, marcarNaoPago, cancelarPedido, marcarEntregue, buscarVendas, numeroDoPedido,
 } from "./banco.js";
 import { formatarPreco, descreverPagamento, podeAvaliar } from "./pedido.js";
 import { protegerPainel, tocarAviso, tempoDecorrido, criarElemento } from "./acesso.js";
+import { PERIODOS, calcularPeriodo, csvDeVendas, csvDeItens, jsonDoContrato, nomeDoArquivo, baixar } from "./exportacao.js";
 
 const HORAS_DE_HISTORICO = 7 * 24;
 
@@ -360,10 +361,46 @@ setInterval(() => {
 
 // ---------- Início ----------
 
+// ---------- Exportação ----------
+
+const FORMATOS = {
+  vendas: { tipo: "vendas", extensao: "csv", mime: "text/csv;charset=utf-8", gerar: (vendas) => csvDeVendas(vendas) },
+  itens: { tipo: "itens", extensao: "csv", mime: "text/csv;charset=utf-8", gerar: (vendas) => csvDeItens(vendas) },
+  json: { tipo: "vendas", extensao: "json", mime: "application/json", gerar: (vendas, periodo) => jsonDoContrato(vendas, loja, periodo) },
+};
+
+function prepararExportacao() {
+  const seletor = document.querySelector("#periodo-exportacao");
+  seletor.replaceChildren(...Object.entries(PERIODOS).map(([valor, rotulo]) => new Option(rotulo, valor, false, valor === "mes")));
+
+  document.querySelectorAll(".exportar [data-formato]").forEach((botao) => {
+    botao.addEventListener("click", async () => {
+      const formato = FORMATOS[botao.dataset.formato];
+      const periodo = calcularPeriodo(seletor.value);
+      botao.disabled = true;
+      try {
+        const vendas = await buscarVendas(loja.loja.id, periodo.inicio, periodo.fim);
+        if (vendas.length === 0) {
+          mostrarAviso(`Nenhuma venda paga em: ${periodo.rotulo.toLowerCase()}.`);
+          return;
+        }
+        baixar(formato.gerar(vendas, periodo), nomeDoArquivo(loja, formato.tipo, periodo, formato.extensao), formato.mime);
+        mostrarAviso(`${vendas.length} ${vendas.length === 1 ? "venda exportada" : "vendas exportadas"}.`);
+      } catch (erro) {
+        console.error(erro);
+        mostrarAviso("Não foi possível exportar as vendas. Confira a conexão.");
+      } finally {
+        botao.disabled = false;
+      }
+    });
+  });
+}
+
 async function iniciar() {
   loja = await carregarConfiguracao();
   document.querySelector("#nome-da-loja").textContent = `Pagamentos de ${loja.loja.nome}`;
   document.querySelector("#data-de-hoje").textContent = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+  prepararExportacao();
   protegerPainel("admin", () => {
     comecarAOuvir();
     acompanharAsAvaliacoes();

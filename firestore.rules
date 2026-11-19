@@ -8,7 +8,7 @@ rules_version = '2';
 //            e avalia o pedido depois de concluído.
 //   cozinha: avança o preparo dos pedidos já liberados, até "pronto". Não mexe em pagamento, entrega nem selos.
 //   admin:   confirma pagamentos, marca pedidos não pagos, cancela pedidos, marca a entrega,
-//            registra os selos e vê as avaliações.
+//            registra os selos e as vendas, exporta as vendas e vê as avaliações.
 // Os papéis ficam em equipe/{uid}, num documento criado à mão no console:
 //   { "nome": "Cozinha", "papeis": ["cozinha"] }
 
@@ -103,6 +103,24 @@ service cloud.firestore {
         || (ehAdmin() && (adminAtualizaPagamento() || adminEntrega()));
 
       allow delete: if false;
+    }
+
+    // ---------- Vendas ----------
+    // Criadas pelo admin na mesma operação que confirma o pagamento do pedido de mesmo id.
+    // getAfter confere o pedido como ele fica depois da operação: só existe venda de pedido pago,
+    // com o mesmo total. Vendas não podem ser alteradas nem apagadas.
+    match /lojas/{lojaId}/vendas/{pedidoId} {
+      function pedidoDepois() {
+        return getAfter(/databases/$(database)/documents/lojas/$(lojaId)/pedidos/$(pedidoId)).data;
+      }
+
+      allow create: if ehAdmin()
+        && pedidoDepois().situacaoPagamento == "confirmado"
+        && request.resource.data.pedidoId == pedidoId
+        && request.resource.data.total == pedidoDepois().total
+        && request.resource.data.pagoEm == request.time;
+      allow get, list: if ehAdmin();
+      allow update, delete: if false;
     }
 
     // ---------- Avaliações ----------

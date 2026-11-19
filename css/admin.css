@@ -32,11 +32,61 @@
     linear-gradient(#000 0 0) top / 100% calc(100% - var(--serrilha) + 1px) no-repeat;
 }
 
+.lateral {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
 @media (min-width: 960px) {
-  .caixa {
+  .lateral {
     position: sticky;
     top: 84px;
   }
+}
+
+/* ---------- Exportação ---------- */
+
+.exportar {
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: var(--branco);
+  border: 1px solid var(--linha);
+}
+
+.exportar h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--marrom);
+}
+
+.exportar p {
+  margin: 2px 0 12px;
+  color: var(--suave);
+  font-size: 0.88rem;
+}
+
+.exportar label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.exportar select {
+  width: 100%;
+  font: inherit;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--linha);
+  background: var(--branco);
+  color: var(--marrom-escuro);
+}
+
+.exportar__botoes {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .caixa p {

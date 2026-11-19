@@ -6,6 +6,10 @@
 import { app } from "./firebase.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { buscarPapeis } from "./banco.js";
+import { registrarApp } from "./app.js";
+
+// Os painéis também podem ser instalados, por exemplo num tablet na cozinha
+registrarApp();
 
 const auth = getAuth(app);
 

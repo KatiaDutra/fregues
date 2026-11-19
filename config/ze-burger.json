@@ -19,6 +19,10 @@
     "fonteTitulos": "Baloo 2",
     "fonteTexto": "Atkinson Hyperlegible"
   },
+  "app": {
+    "manifesto": "config/ze-burger.webmanifest",
+    "iconeIphone": "assets/lojas/ze-burger/apple-touch-icon.png"
+  },
   "horario": {
     "diasDaSemana": [
       2,

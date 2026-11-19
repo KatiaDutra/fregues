@@ -4,7 +4,7 @@
 
 import { db } from "./firebase.js";
 import {
-  collection, addDoc, doc, getDoc, setDoc, onSnapshot, updateDoc, query, where, orderBy, limit, serverTimestamp, Timestamp, runTransaction,
+  collection, addDoc, doc, getDoc, getDocs, setDoc, onSnapshot, updateDoc, query, where, orderBy, limit, serverTimestamp, Timestamp, runTransaction,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { agruparItens, calcularSubtotal, calcularTaxa, calcularTotal } from "./pedido.js";
 import { selosValidos } from "./fidelidade.js";
@@ -30,9 +30,13 @@ export async function salvarPedido(pedido, loja) {
   const dados = {
     cliente: pedido.cliente,
     itens: agruparItens(pedido, loja).map((grupo) => ({
+      produtoId: grupo.produtoId,
+      categoria: grupo.categoria,
+      combo: grupo.combo,
       quantidade: grupo.quantidade,
       titulo: grupo.descricao.titulo,
       detalhes: grupo.descricao.detalhes,
+      precoUnitario: grupo.precoUnitario,
       precoTotal: grupo.precoTotal,
     })),
     subtotal: calcularSubtotal(pedido, loja),
@@ -116,8 +120,15 @@ export async function confirmarPagamento(loja, pedido) {
     mudancas.atualizadoEm = serverTimestamp();
   }
 
+  // A venda nasce na mesma operação, no formato do contrato de dados (docs/contrato-de-dados.md)
+  const referenciaVenda = doc(db, "lojas", lojaId, "vendas", pedido.id);
+  const venda = montarVenda(pedido);
+
   if (!pedido.clienteId) {
-    await updateDoc(referenciaPedido, mudancas);
+    await runTransaction(db, async (transacao) => {
+      transacao.update(referenciaPedido, mudancas);
+      transacao.set(referenciaVenda, venda);
+    });
     return null;
   }
 
@@ -139,8 +150,59 @@ export async function confirmarPagamento(loja, pedido) {
     selos.push(Timestamp.now());
     transacao.set(referenciaCartao, { nome: pedido.cliente.split(" ")[0], selos, atualizadoEm: serverTimestamp() });
     transacao.update(referenciaPedido, mudancas);
+    transacao.set(referenciaVenda, venda);
     return aviso;
   });
+}
+
+// ---------- Vendas ----------
+// Uma venda é um pedido com pagamento confirmado, num formato estável e independente das telas.
+// É o que o Centraliza, as planilhas e o Power BI leem. Versão 1 do contrato de dados.
+
+export const VERSAO_DO_CONTRATO = 1;
+
+function montarVenda(pedido) {
+  return {
+    versao: VERSAO_DO_CONTRATO,
+    pedidoId: pedido.id,
+    numero: numeroDoPedido(pedido.id),
+    origem: "fregues",
+    data: pedido.criadoEm, // quando o cliente fez o pedido
+    pagoEm: serverTimestamp(), // quando o admin confirmou o pagamento
+    cliente: pedido.cliente,
+    clienteId: pedido.clienteId ?? null,
+    tipoEntrega: pedido.entrega.tipo,
+    bairro: pedido.entrega.bairro ?? null,
+    formaPagamento: pedido.pagamento,
+    momentoPagamento: pedido.momentoPagamento,
+    // Pedidos anteriores à Versão 5 não guardavam produto, categoria e preço unitário
+    itens: pedido.itens.map((item) => ({
+      produtoId: item.produtoId ?? null,
+      categoria: item.categoria ?? null,
+      nome: item.titulo,
+      detalhes: item.detalhes ?? [],
+      combo: item.combo ?? false,
+      quantidade: item.quantidade,
+      precoUnitario: item.precoUnitario ?? item.precoTotal / item.quantidade,
+      total: item.precoTotal,
+    })),
+    subtotal: pedido.subtotal,
+    taxaEntrega: pedido.taxa,
+    total: pedido.total,
+    usouPremio: pedido.usaPremio === true,
+  };
+}
+
+// Vendas de um período: inicio incluído, fim excluído
+export async function buscarVendas(lojaId, inicio, fim) {
+  const consulta = query(
+    collection(db, "lojas", lojaId, "vendas"),
+    where("data", ">=", Timestamp.fromDate(inicio)),
+    where("data", "<", Timestamp.fromDate(fim)),
+    orderBy("data")
+  );
+  const resultado = await getDocs(consulta);
+  return resultado.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 // O admin entrega o pedido (motoboy ou balcão). A hora da entrega conta o tempo

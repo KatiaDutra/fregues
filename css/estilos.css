@@ -372,6 +372,27 @@ body {
   background: color-mix(in srgb, var(--cor-principal) 85%, var(--cor-texto));
 }
 
+/* ---------- Instalar o app ---------- */
+
+.botao-instalar {
+  display: block;
+  margin: 0 auto 8px;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 2px solid var(--cor-principal);
+  background: transparent;
+  color: var(--cor-principal);
+  cursor: pointer;
+}
+
+.botao-instalar:hover {
+  background: var(--cor-principal);
+  color: var(--cor-texto-sobre-principal);
+}
+
 /* ---------- Chave Pix ---------- */
 
 .chave-pix {

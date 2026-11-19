@@ -5,6 +5,7 @@ import { aplicarTema, aplicarIcone } from "./tema.js";
 import { statusDaLoja } from "./horario.js";
 import { configurarAvatar } from "./ui.js";
 import { iniciarConversa, responderTexto } from "./bot.js";
+import { registrarApp, aplicarApp, oferecerInstalacao } from "./app.js";
 
 function preencherCabecalho(loja) {
   document.title = `${loja.loja.nome} | Atendimento`;
@@ -35,6 +36,9 @@ async function iniciar() {
     const loja = await carregarConfiguracao();
     aplicarTema(loja.tema);
     aplicarIcone(loja.loja.avatar);
+    aplicarApp(loja);
+    oferecerInstalacao(document.querySelector("#botao-instalar"));
+    document.querySelector("#botao-instalar").textContent = `📲 Instalar o app do ${loja.loja.nome}`;
     configurarAvatar(loja.loja.avatar);
     preencherCabecalho(loja);
     ativarCampoDeTexto();
@@ -48,4 +52,5 @@ async function iniciar() {
   }
 }
 
+registrarApp();
 iniciar();

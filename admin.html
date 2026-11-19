@@ -7,6 +7,8 @@
   <meta name="robots" content="noindex">
   <meta name="theme-color" content="#592012">
   <link rel="icon" href="assets/img/favicon.ico" sizes="48x48">
+  <link rel="manifest" href="admin.webmanifest">
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Baloo+2:wght@600;700&display=swap" rel="stylesheet">
@@ -51,6 +53,7 @@
   </main>
 
   <main id="tela-painel" class="admin" hidden>
+    <div class="lateral">
     <!-- Caixa do dia, em forma de bobina de caixa -->
     <aside class="caixa" aria-labelledby="titulo-caixa">
       <h1 id="titulo-caixa" class="caixa__titulo">Caixa de hoje</h1>
@@ -65,6 +68,20 @@
       </dl>
       <p class="caixa__nota">Considera os pedidos feitos hoje. As listas ao lado mostram os últimos 7 dias.</p>
     </aside>
+
+    <!-- Exportação das vendas pagas, no formato do contrato de dados -->
+    <section class="exportar" aria-labelledby="titulo-exportar">
+      <h2 id="titulo-exportar">Exportar vendas</h2>
+      <p>Vendas com pagamento confirmado, para planilha, Power BI ou o Centraliza.</p>
+      <label for="periodo-exportacao">Período</label>
+      <select id="periodo-exportacao"></select>
+      <div class="exportar__botoes">
+        <button type="button" class="botao-secundario" data-formato="vendas">Vendas (CSV)</button>
+        <button type="button" class="botao-secundario" data-formato="itens">Itens vendidos (CSV)</button>
+        <button type="button" class="botao-secundario" data-formato="json">Dados completos (JSON)</button>
+      </div>
+    </section>
+    </div>
 
     <div class="filas">
       <section class="fila fila--aguardando" aria-labelledby="titulo-aguardando">

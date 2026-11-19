@@ -26,6 +26,9 @@ O Freguês é um assistente de atendimento que acompanha toda a jornada do clien
 4. **Controla o pagamento**: o cliente paga no pedido ou no recebimento, e o administrador confirma cada pagamento.
 5. **Registra selos** no cartão fidelidade, somente depois do pagamento confirmado.
 6. **Faz o pós-venda**, pedindo uma avaliação e convidando o cliente a voltar.
+7. **Organiza as vendas** num formato padrão, pronto para planilha, Power BI e o sistema de gestão [Centraliza](https://github.com/KatiaDutra/centraliza).
+
+O chat pode ser **instalado no celular como aplicativo**, com o nome e o ícone da loja, sem passar por loja de aplicativos.
 
 Tudo funciona com ferramentas gratuitas e sem a API paga do WhatsApp.
 
@@ -42,7 +45,36 @@ No Freguês, **a IA entende e o sistema decide**.
 
 O cardápio, os preços, os horários, as dúvidas frequentes e as regras da loja ficam em um único arquivo de configuração (`config/ze-burger.json`). Trocando esse arquivo, o Freguês passa a atender outro negócio, sem alterar o código.
 
-O Freguês funciona como **white-label**: no chat, o cliente final vê as cores, o nome e o atendente da loja. A marca do Freguês aparece só no rodapé e nas telas de gestão usadas pela equipe da loja (cozinha e pagamentos).
+O Freguês funciona como **white-label**: no chat, o cliente final vê as cores, o nome e o atendente da loja, e o aplicativo instalado tem o ícone da loja. Assim, cada lanchonete tem o próprio app, sem pagar comissão a plataformas de delivery. A marca do Freguês aparece só no rodapé e nas telas de gestão usadas pela equipe da loja (cozinha e pagamentos).
+
+## Aplicativo instalável (PWA)
+
+O Freguês é um **PWA** (Progressive Web App): o próprio site pode ser instalado no celular ou no computador, com ícone na tela inicial e abertura em tela cheia, sem Play Store ou App Store e sem custo.
+
+| App | Para quem | Nome e ícone | Arquivo |
+|---|---|---|---|
+| Chat da loja | Cliente final | Da loja (Zé Burger, na demonstração) | `config/ze-burger.webmanifest` |
+| Cozinha | Equipe, por exemplo num tablet | Do Freguês | `cozinha.webmanifest` |
+| Pagamentos | Administrador | Do Freguês | `admin.webmanifest` |
+
+- **Android e computador (Chrome ou Edge):** o chat mostra o botão **Instalar o app**, ou use o menu do navegador > *Instalar app*.
+- **iPhone (Safari):** botão Compartilhar > *Adicionar à Tela de Início*.
+
+O `sw.js` (service worker) guarda uma cópia das telas para abrirem rápido e até sem internet. Ele busca sempre a versão mais nova quando há conexão, então uma atualização publicada no GitHub chega aos apps instalados sem o cliente baixar nada. Pedidos, pagamentos e selos continuam passando pelo Firebase.
+
+Para outra loja, basta criar o manifesto dela em `config/` com os ícones em `assets/lojas/` e apontar o campo `app.manifesto` da configuração para ele.
+
+## Vendas e integração
+
+Quando o administrador confirma um pagamento, o Freguês grava uma **venda** num formato padronizado, descrito em [`docs/contrato-de-dados.md`](docs/contrato-de-dados.md): data, cliente, forma de pagamento, entrega e os itens com produto, categoria, quantidade e preço. Pedido não pago não vira venda.
+
+No painel do administrador, **Exportar vendas** gera, para o período escolhido:
+
+- **Vendas (CSV):** uma linha por venda, para faturamento, ticket médio e formas de pagamento;
+- **Itens vendidos (CSV):** uma linha por item, para produtos mais vendidos e curva ABC;
+- **Dados completos (JSON):** o contrato de dados inteiro, para importar em outros sistemas.
+
+Os CSV abrem direto no Excel e no Power BI, no padrão brasileiro. Como o Freguês e o [Centraliza](https://github.com/KatiaDutra/centraliza) usam o mesmo projeto do Firebase, o Centraliza poderá ler essas vendas direto do banco, transformando cada venda em receita e cada item em baixa de estoque.
 
 ## Perfis de acesso
 
@@ -103,10 +135,16 @@ A confirmação do pagamento é manual de propósito: com custo zero, não há i
 - [x] Avaliações no painel do administrador: nota média, distribuição e comentários, com destaque para as notas baixas
 - [ ] Resumo das avaliações com IA (bônus)
 
-### Versão 5: aplicativo e integração
-- [ ] Chat instalável no celular (PWA), com o ícone da loja
-- [ ] Integração com o [Centraliza](https://github.com/KatiaDutra/centraliza): pedidos não pagos e avaliações ruins viram atendimentos
-- [ ] Vendas confirmadas em formato padronizado, com exportação para planilha e BI
+### Versão 5: aplicativo e vendas
+- [x] Chat instalável no celular (PWA), com o nome e o ícone da loja
+- [x] Painéis da cozinha e do administrador instaláveis, com a marca do Freguês
+- [x] Funcionamento com internet instável, com as telas guardadas pelo service worker
+- [x] Vendas confirmadas em formato padronizado, com contrato de dados documentado
+- [x] Exportação das vendas e dos itens vendidos para planilha, Power BI e JSON
+
+### Próximo passo: integração com o Centraliza
+- [ ] Pedidos não pagos e avaliações ruins viram atendimentos no [Centraliza](https://github.com/KatiaDutra/centraliza)
+- [ ] Vendas do Freguês como receitas e baixa de estoque na gestão do negócio
 
 ## Segurança dos dados
 
@@ -117,6 +155,7 @@ Os dados ficam no Firestore, protegidos pelas regras em `firestore.rules`. Os pa
 - a **cozinha** só avança o preparo, na ordem certa, até "pronto", e só de pedidos já liberados: um pedido esperando pagamento não pode ser preparado;
 - só o **administrador** marca um pedido pronto como entregue, e a hora da entrega é registrada pelo servidor;
 - o **administrador** é o único que muda a situação do pagamento, e um pagamento confirmado não pode ser desfeito;
+- uma **venda** só pode ser gravada pelo administrador, junto com a confirmação do pagamento do mesmo pedido e com o mesmo total; vendas não podem ser alteradas nem apagadas, e só o administrador as lê;
 - uma **avaliação** só pode ser feita para um pedido que existe, foi entregue e está pago, uma única vez, e não pode ser alterada nem apagada; só o administrador lista as avaliações;
 - os **selos de fidelidade** só podem ser registrados pelo administrador, então nenhum selo nasce sem pagamento confirmado e nenhum cliente consegue dar selos a si mesmo;
 - ninguém pode apagar pedidos, e a criação de novas contas está desativada no Authentication.
@@ -155,7 +194,10 @@ O projeto carrega o arquivo de configuração com `fetch`, então ele precisa se
 fregues/
 ├── index.html            Página do cliente (chat)
 ├── cozinha.html          Painel da cozinha (login e pedidos em tempo real)
-├── admin.html            Painel do administrador (pagamentos e caixa do dia)
+├── admin.html            Painel do administrador (pagamentos, entregas, avaliações e vendas)
+├── sw.js                 Service worker: app instalável e telas sem internet
+├── cozinha.webmanifest   App da cozinha
+├── admin.webmanifest     App do administrador
 ├── firestore.rules       Regras de segurança do banco
 ├── css/
 │   ├── estilos.css       Chat, com o tema da loja
@@ -163,6 +205,7 @@ fregues/
 │   └── admin.css         Caixa do dia e filas de pagamento
 ├── js/
 │   ├── main.js           Ponto de entrada
+│   ├── app.js            Registro do app e botão de instalar
 │   ├── config.js         Carrega a configuração da loja
 │   ├── tema.js           Aplica as cores e fontes da loja
 │   ├── horario.js        Calcula se a loja está aberta
@@ -173,19 +216,23 @@ fregues/
 │   ├── pedido.js         Regras e cálculo do pedido
 │   ├── whatsapp.js       Resumo e link para o WhatsApp
 │   ├── firebase.js       Conexão com o Firebase
-│   ├── banco.js          Pedidos, pagamentos, equipe, selos e avaliações no Firestore
+│   ├── banco.js          Pedidos, pagamentos, vendas, equipe, selos e avaliações no Firestore
 │   ├── acesso.js         Login da equipe e conferência dos papéis
 │   ├── cozinha.js        Lógica do painel da cozinha
 │   ├── admin.js          Lógica do painel do administrador
 │   ├── fidelidade.js     Telefone protegido, selos e desenho do cartão
 │   ├── avaliacao.js      Avaliação do pedido no chat e pelo link
+│   ├── exportacao.js     Arquivos CSV e JSON das vendas
 │   └── ia.js             Camada opcional de IA
 ├── config/
-│   └── ze-burger.json    Cardápio e regras da loja de demonstração
+│   ├── ze-burger.json    Cardápio e regras da loja de demonstração
+│   └── ze-burger.webmanifest  App da loja de demonstração
 ├── worker/               Função intermediária da IA
 ├── assets/img/           Logo, ícones e favicon do Freguês
-├── assets/lojas/         Imagens de cada loja (avatar, logo)
-└── docs/validacao/       Registro dos testes com usuários
+├── assets/lojas/         Imagens de cada loja (avatar, ícones do app)
+└── docs/
+    ├── contrato-de-dados.md  Formato das vendas para outros sistemas
+    └── validacao/            Registro dos testes com usuários
 ```
 
 ## Validação com usuários

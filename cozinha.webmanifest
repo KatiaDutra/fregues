@@ -1,0 +1,17 @@
+{
+  "id": "./cozinha.html",
+  "name": "Cozinha | Freguês",
+  "short_name": "Cozinha",
+  "description": "Pedidos em tempo real para a cozinha da loja.",
+  "lang": "pt-BR",
+  "start_url": "./cozinha.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#FFF8EC",
+  "theme_color": "#592012",
+  "icons": [
+    { "src": "assets/img/icone-app-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/img/icone-app-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "assets/img/icone-app-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

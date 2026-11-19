@@ -74,6 +74,16 @@ export function descreverItem(item, loja) {
   return { titulo: item.nome, detalhes };
 }
 
+// Categoria do item no cardápio ("burgers", "bebidas"...), usada nas vendas e nos relatórios
+export function categoriaDoItem(item, loja) {
+  if (item.tipo === "burger") return "burgers";
+  if (item.tipo === "premio") return "premio";
+  const categoria = ["acompanhamentos", "bebidas", "sobremesas"].find((nome) =>
+    (loja.cardapio[nome] ?? []).some((produto) => produto.id === item.id)
+  );
+  return categoria ?? "outros";
+}
+
 // Junta itens iguais: dois refrigerantes viram "2x Refrigerante lata"
 export function agruparItens(pedido, loja) {
   const grupos = new Map();
@@ -83,7 +93,15 @@ export function agruparItens(pedido, loja) {
     const chave = JSON.stringify(descricao);
 
     if (!grupos.has(chave)) {
-      grupos.set(chave, { descricao, quantidade: 0, precoUnitario: precoDoItem(item, loja), indices: [] });
+      grupos.set(chave, {
+        descricao,
+        produtoId: item.id,
+        categoria: categoriaDoItem(item, loja),
+        combo: item.combo === true,
+        quantidade: 0,
+        precoUnitario: precoDoItem(item, loja),
+        indices: [],
+      });
     }
 
     const grupo = grupos.get(chave);
