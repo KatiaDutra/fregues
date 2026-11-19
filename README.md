@@ -8,7 +8,13 @@
 
 Atendimento, pedidos e fidelidade para pequenos negócios de alimentação, com custo zero.
 
-> Projeto em desenvolvimento como trabalho final da residência Bolsa Futuro Digital.
+<p>
+  <a href="https://katiadutra.github.io/fregues/"><strong>Fazer um pedido no Zé Burger</strong></a>,
+  a lanchonete de demonstração. Para conhecer a gestão integrada, acesse o
+  <a href="https://katiadutra.github.io/centraliza/"><strong>Centraliza</strong></a>.
+</p>
+
+> Trabalho final da residência Bolsa Futuro Digital.
 
 ---
 
@@ -31,6 +37,20 @@ O Freguês é um assistente de atendimento que acompanha toda a jornada do clien
 O chat pode ser **instalado no celular como aplicativo**, com o nome e o ícone da loja, sem passar por loja de aplicativos.
 
 Tudo funciona com ferramentas gratuitas e sem a API paga do WhatsApp.
+
+## Capturas de tela
+
+| Boas-vindas | Resumo do pedido | Pagamento por Pix |
+|---|---|---|
+| ![Chat do Zé Burger com a saudação do Chefe Zé e o menu de opções](docs/capturas/chat-boas-vindas.png) | ![Resumo do pedido com itens, taxa de entrega, total e forma de pagamento](docs/capturas/chat-resumo.png) | ![Chave Pix com botão de copiar, depois do pedido enviado](docs/capturas/chat-pix.png) |
+
+**Painel de pagamentos do administrador:** caixa do dia, pedidos aguardando pagamento, prontos para entregar, a receber e não pagos.
+
+![Painel do administrador com a bobina do caixa do dia e as filas de pagamento](docs/capturas/painel-pagamentos.png)
+
+| Painel da cozinha | Avaliações e exportação de vendas |
+|---|---|
+| ![Painel da cozinha com as colunas Recebidos, Em preparo e Prontos](docs/capturas/painel-cozinha.png) | ![Nota média, distribuição das estrelas, comentários dos clientes e seção Exportar vendas](docs/capturas/painel-avaliacoes.png) |
 
 ## Uso de IA
 
@@ -243,6 +263,7 @@ fregues/
 ├── assets/lojas/         Imagens de cada loja (avatar, ícones do app)
 └── docs/
     ├── contrato-de-dados.md  Formato das vendas para outros sistemas
+    ├── capturas/             Capturas de tela deste README
     └── validacao/            Registro dos testes com usuários
 ```
 
